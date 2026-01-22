@@ -259,6 +259,36 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Force reset admin password - a supprimer en production
+app.get('/api/debug/reset-admin', (req, res) => {
+    try {
+        const adminEmail = process.env.ADMIN_EMAIL || 'admin@alphamouv.com';
+        const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+        const hashedPassword = bcrypt.hashSync(adminPassword, 10);
+
+        // Supprimer tous les admins existants et en recreer un
+        db.run("DELETE FROM users WHERE role = 'admin'");
+        db.run(`
+            INSERT INTO users (email, password, nom, prenom, role)
+            VALUES (?, ?, ?, ?, ?)
+        `, [adminEmail, hashedPassword, 'Admin', 'AlphaMouv', 'admin']);
+        saveDatabase();
+
+        // Verifier que ca a marche
+        const admin = dbGet("SELECT id, email FROM users WHERE role = 'admin'");
+        const testMatch = bcrypt.compareSync(adminPassword, dbGet("SELECT password FROM users WHERE email = ?", [adminEmail])?.password || '');
+
+        res.json({
+            success: true,
+            message: 'Admin reinitialise',
+            adminEmail: admin?.email,
+            passwordTestOK: testMatch
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur: ' + error.message });
+    }
+});
+
 // Debug endpoint - a supprimer en production
 app.get('/api/debug/admin', (req, res) => {
     try {

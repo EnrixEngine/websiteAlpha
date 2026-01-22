@@ -8730,44 +8730,47 @@
         }
 
         // Gérer la soumission du formulaire de connexion
-        function handleLoginSubmit(event) {
+        async function handleLoginSubmit(event) {
             event.preventDefault();
 
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
 
-            // Récupérer les utilisateurs enregistrés
-            const users = JSON.parse(localStorage.getItem('alphamouv_users')) || [];
-            const user = users.find(u => u.email === email && u.password === password);
+            try {
+                // Utiliser l'API pour la connexion
+                const response = await AlphaMovAPI.Auth.login(email, password);
 
-            if (user) {
-                // Vérifier si l'utilisateur est banni
-                if (checkUserBanned(email)) {
-                    alert('🚫 Accès refusé\n\nVotre compte a été suspendu par un administrateur.\n\nPour plus d\'informations, veuillez contacter le support.');
-                    event.target.reset();
-                    return;
+                if (response.success && response.user) {
+                    // Vérifier si l'utilisateur est banni
+                    if (checkUserBanned(email)) {
+                        alert('🚫 Accès refusé\n\nVotre compte a été suspendu par un administrateur.\n\nPour plus d\'informations, veuillez contacter le support.');
+                        event.target.reset();
+                        return;
+                    }
+
+                    // Connexion réussie
+                    currentUser = {
+                        name: response.user.prenom || response.user.nom || email.split('@')[0],
+                        email: response.user.email,
+                        role: response.user.role,
+                        joinDate: response.user.created_at
+                    };
+                    localStorage.setItem('alphamouv_user', JSON.stringify(currentUser));
+
+                    // Fusionner le panier invité avec le compte
+                    mergeGuestCart();
+
+                    closeAuthPopup();
+                    initUserInterface();
+                    updateCartCount();
+
+                    // Message de bienvenue
+                    setTimeout(() => {
+                        alert('🎉 Bienvenue ' + currentUser.name + ' !\n\nVous êtes maintenant connecté(e) à votre espace AlphaMouv.');
+                    }, 300);
                 }
-
-                // Connexion réussie
-                currentUser = {
-                    name: user.name,
-                    email: user.email,
-                    joinDate: user.joinDate
-                };
-                localStorage.setItem('alphamouv_user', JSON.stringify(currentUser));
-
-                // Fusionner le panier invité avec le compte
-                mergeGuestCart();
-
-                closeAuthPopup();
-                initUserInterface();
-                updateCartCount();
-
-                // Message de bienvenue
-                setTimeout(() => {
-                    alert('🎉 Bienvenue ' + currentUser.name + ' !\n\nVous êtes maintenant connecté(e) à votre espace AlphaMouv.');
-                }, 300);
-            } else {
+            } catch (error) {
+                console.error('Erreur connexion:', error);
                 alert('❌ Email ou mot de passe incorrect.\n\nVeuillez réessayer ou créer un compte.');
             }
 

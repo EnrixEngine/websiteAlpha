@@ -12394,19 +12394,35 @@
         async function loadImagesManager() {
             const grid = document.getElementById('imagesManagerContent') || document.getElementById('imagesGrid');
 
-            // Charger les images du carrousel depuis IndexedDB
+            // Charger les images du carrousel depuis le serveur
             let carouselImages = [null, null, null, null];
             try {
-                carouselImages = await ImageDB.getAllCarouselImages();
+                // D'abord essayer le serveur
+                const serverImages = await AlphaMovAPI.Carousel.getAll();
+                if (serverImages && serverImages.length > 0) {
+                    serverImages.forEach(img => {
+                        if (img.ordre >= 0 && img.ordre < 4) {
+                            carouselImages[img.ordre] = img.image;
+                        }
+                    });
+                    console.log('Images carrousel chargees depuis serveur');
+                } else {
+                    // Fallback IndexedDB
+                    carouselImages = await ImageDB.getAllCarouselImages();
+                }
             } catch (error) {
                 console.error('Erreur chargement carrousel:', error);
+                // Fallback IndexedDB
+                try {
+                    carouselImages = await ImageDB.getAllCarouselImages();
+                } catch (e) {}
             }
 
 
             var html = '';
 
-            // Images du carrousel (depuis IndexedDB)
-            html += '<h4 style="color: white; grid-column: 1/-1; margin-bottom: 10px;">Images du Carrousel (IndexedDB)</h4>';
+            // Images du carrousel (depuis le serveur Cloudinary)
+            html += '<h4 style="color: white; grid-column: 1/-1; margin-bottom: 10px;">Images du Carrousel (Cloudinary)</h4>';
             for (let i = 0; i < 4; i++) {
                 var img = carouselImages[i];
                 html += '<div class="image-card" data-card-id="carousel-' + i + '">' +
@@ -12568,8 +12584,46 @@
         async function saveImage(type, index, imageData) {
             try {
                 if (type === 'carousel') {
-                    await ImageDB.saveCarouselImage(index, imageData);
-                    console.log('✅ Image carrousel #' + (index + 1) + ' sauvegardée dans IndexedDB');
+                    // Upload vers Cloudinary et sauvegarde sur le serveur
+                    console.log('Upload vers Cloudinary en cours...');
+
+                    // Convertir base64 en fichier
+                    const base64Response = await fetch(imageData);
+                    const blob = await base64Response.blob();
+                    const file = new File([blob], 'carousel-' + index + '.jpg', { type: blob.type });
+
+                    // Upload vers Cloudinary
+                    const uploadResult = await AlphaMovAPI.Upload.uploadImage(file);
+
+                    if (uploadResult.success && uploadResult.url) {
+                        // Verifier si une image existe deja a cet index
+                        const existingImages = await AlphaMovAPI.Carousel.getAll();
+                        const existingImage = existingImages.find(img => img.ordre === index);
+
+                        if (existingImage) {
+                            // Mettre a jour l'image existante
+                            await AlphaMovAPI.Carousel.update(existingImage.id, {
+                                titre: 'Slide ' + (index + 1),
+                                description: 'Image personnalisee',
+                                image: uploadResult.url,
+                                ordre: index
+                            });
+                            console.log('Image carrousel #' + (index + 1) + ' mise a jour sur le serveur');
+                        } else {
+                            // Ajouter une nouvelle image
+                            await AlphaMovAPI.Carousel.add({
+                                titre: 'Slide ' + (index + 1),
+                                description: 'Image personnalisee',
+                                image: uploadResult.url,
+                                ordre: index
+                            });
+                            console.log('Image carrousel #' + (index + 1) + ' ajoutee sur le serveur');
+                        }
+                        // Aussi sauvegarder localement pour affichage immediat
+                        await ImageDB.saveCarouselImage(index, uploadResult.url);
+                    } else {
+                        throw new Error('Echec upload Cloudinary');
+                    }
                 } else if (type === 'logo') {
                     // Pour le logo, on utilise encore localStorage (petit fichier)
                     const images = JSON.parse(localStorage.getItem('alphamouv_images')) || {};
@@ -12629,12 +12683,24 @@
 
         // Supprimer une image
         async function removeImage(type, index) {
-            if (!confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) return;
+            if (!confirm('Etes-vous sur de vouloir supprimer cette image ?')) return;
 
             try {
                 if (type === 'carousel') {
+                    // Supprimer du serveur
+                    try {
+                        const serverImages = await AlphaMovAPI.Carousel.getAll();
+                        const imageToDelete = serverImages.find(img => img.ordre === index);
+                        if (imageToDelete) {
+                            await AlphaMovAPI.Carousel.delete(imageToDelete.id);
+                            console.log('✓ Image carrousel supprimee du serveur');
+                        }
+                    } catch (e) {
+                        console.log('Erreur suppression serveur:', e);
+                    }
+                    // Supprimer aussi du cache local
                     await ImageDB.deleteCarouselImage(index);
-                    console.log('✓ Image carrousel supprimée');
+                    console.log('✓ Image carrousel supprimee');
                 } else if (type === 'logo') {
                     const images = JSON.parse(localStorage.getItem('alphamouv_images')) || {};
                     images.logo = null;
@@ -15144,14 +15210,42 @@
         // Charger les images du carrousel depuis IndexedDB au démarrage
         async function loadCarouselImagesFromDB() {
             try {
-                const images = await ImageDB.getAllCarouselImages();
+                // D'abord essayer de charger depuis le serveur
+                let serverImages = [];
+                try {
+                    serverImages = await AlphaMovAPI.Carousel.getAll();
+                    console.log('✓ Images carrousel chargees depuis le serveur:', serverImages.length);
+                } catch (e) {
+                    console.log('Serveur non disponible, utilisation du cache local');
+                }
+
                 const slides = document.querySelectorAll('.carousel-slide');
-                images.forEach((imageData, index) => {
-                    if (imageData && slides[index]) {
-                        slides[index].innerHTML = '<img src="' + imageData + '" alt="Slide ' + (index + 1) + '" style="width: 100%; height: 100%; object-fit: cover;">';
+
+                // Si on a des images du serveur, les utiliser
+                if (serverImages && serverImages.length > 0) {
+                    // Organiser par ordre
+                    const imagesByOrder = {};
+                    serverImages.forEach(img => {
+                        imagesByOrder[img.ordre] = img.image;
+                    });
+
+                    for (let i = 0; i < 4; i++) {
+                        if (imagesByOrder[i] && slides[i]) {
+                            slides[i].innerHTML = '<img src="' + imagesByOrder[i] + '" alt="Slide ' + (i + 1) + '" style="width: 100%; height: 100%; object-fit: cover;">';
+                            // Mettre en cache local
+                            await ImageDB.saveCarouselImage(i, imagesByOrder[i]);
+                        }
                     }
-                });
-                console.log('✓ Images carrousel chargées depuis IndexedDB');
+                } else {
+                    // Fallback sur IndexedDB local
+                    const images = await ImageDB.getAllCarouselImages();
+                    images.forEach((imageData, index) => {
+                        if (imageData && slides[index]) {
+                            slides[index].innerHTML = '<img src="' + imageData + '" alt="Slide ' + (index + 1) + '" style="width: 100%; height: 100%; object-fit: cover;">';
+                        }
+                    });
+                    console.log('✓ Images carrousel chargees depuis IndexedDB');
+                }
             } catch (error) {
                 console.error('Erreur chargement carrousel:', error);
             }

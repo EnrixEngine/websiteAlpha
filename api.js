@@ -257,6 +257,38 @@ const GalleryAPI = {
     },
 };
 
+// ==================== CARROUSEL ====================
+
+const CarouselAPI = {
+    // Liste des images du carrousel
+    async getAll() {
+        return await apiRequest('/carousel');
+    },
+
+    // Ajouter une image (admin)
+    async add(imageData) {
+        return await apiRequest('/carousel', {
+            method: 'POST',
+            body: JSON.stringify(imageData),
+        });
+    },
+
+    // Modifier une image (admin)
+    async update(id, imageData) {
+        return await apiRequest(`/carousel/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(imageData),
+        });
+    },
+
+    // Supprimer une image (admin)
+    async delete(id) {
+        return await apiRequest(`/carousel/${id}`, {
+            method: 'DELETE',
+        });
+    },
+};
+
 // ==================== UPLOAD ====================
 
 const UploadAPI = {
@@ -337,6 +369,7 @@ window.AlphaMovAPI = {
     Newsletter: NewsletterAPI,
     Events: EventsAPI,
     Gallery: GalleryAPI,
+    Carousel: CarouselAPI,
     Upload: UploadAPI,
     Contact: ContactAPI,
     Stats: StatsAPI,

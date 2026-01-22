@@ -167,6 +167,17 @@ async function initDatabase() {
         )
     `);
 
+    db.run(`
+        CREATE TABLE IF NOT EXISTS carousel (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            titre TEXT,
+            description TEXT,
+            image TEXT NOT NULL,
+            ordre INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
     // Creer ou mettre a jour admin par defaut
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@alphamouv.com';
     const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
@@ -680,6 +691,52 @@ app.post('/api/gallery', authenticateToken, isAdmin, (req, res) => {
 app.delete('/api/gallery/:id', authenticateToken, isAdmin, (req, res) => {
     try {
         dbRun('DELETE FROM gallery WHERE id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// ==================== API CARROUSEL ====================
+
+app.get('/api/carousel', (req, res) => {
+    try {
+        const images = dbAll('SELECT * FROM carousel ORDER BY ordre ASC, created_at DESC');
+        res.json(images);
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+app.post('/api/carousel', authenticateToken, isAdmin, (req, res) => {
+    try {
+        const { titre, description, image, ordre } = req.body;
+        const result = dbRun(`
+            INSERT INTO carousel (titre, description, image, ordre)
+            VALUES (?, ?, ?, ?)
+        `, [titre || '', description || '', image, ordre || 0]);
+        res.json({ success: true, id: result.lastID });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+app.put('/api/carousel/:id', authenticateToken, isAdmin, (req, res) => {
+    try {
+        const { titre, description, image, ordre } = req.body;
+        dbRun(`
+            UPDATE carousel SET titre = ?, description = ?, image = ?, ordre = ?
+            WHERE id = ?
+        `, [titre, description, image, ordre, req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+app.delete('/api/carousel/:id', authenticateToken, isAdmin, (req, res) => {
+    try {
+        dbRun('DELETE FROM carousel WHERE id = ?', [req.params.id]);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });

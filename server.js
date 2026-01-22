@@ -272,14 +272,28 @@ app.get('/api/debug/admin', (req, res) => {
             passwordMatch = bcrypt.compareSync(envPassword, admin.password);
         }
 
+        // Test direct de login
+        let loginTest = 'non teste';
+        if (admin) {
+            const userByEmail = dbGet('SELECT * FROM users WHERE email = ?', [envEmail]);
+            if (!userByEmail) {
+                loginTest = 'Email non trouve en base';
+            } else {
+                const validPwd = bcrypt.compareSync(envPassword, userByEmail.password);
+                loginTest = validPwd ? 'Login OK' : 'Mot de passe incorrect';
+            }
+        }
+
         res.json({
             adminExists: !!admin,
             adminEmail: admin ? admin.email : null,
+            adminPasswordHashStart: admin ? admin.password.substring(0, 10) + '...' : null,
             envEmailConfigured: envEmail !== 'non defini',
             envEmail: envEmail,
             envPasswordConfigured: envPassword !== 'non defini',
             envPasswordLength: envPassword.length,
-            passwordMatchesHash: passwordMatch
+            passwordMatchesHash: passwordMatch,
+            loginTestResult: loginTest
         });
     } catch (error) {
         res.status(500).json({ error: 'Erreur: ' + error.message });

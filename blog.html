@@ -10423,7 +10423,11 @@
             const adminData = JSON.parse(localStorage.getItem('alphamouv_admin')) || {};
             const currentUser = JSON.parse(localStorage.getItem('alphamouv_user'));
 
-            if (currentUser && adminData.admins && adminData.admins.includes(currentUser.email)) {
+            // Verifier le role du serveur OU la liste locale d'admins
+            const isServerAdmin = currentUser && currentUser.role === 'admin';
+            const isLocalAdmin = currentUser && adminData.admins && adminData.admins.includes(currentUser.email);
+
+            if (isServerAdmin || isLocalAdmin) {
                 isAdmin = true;
                 document.getElementById('adminSidebarToggle').classList.add('visible');
                 document.getElementById('navEditBtn').style.display = 'flex';

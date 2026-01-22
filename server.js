@@ -11,6 +11,14 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
+
+// Configuration Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -38,16 +46,8 @@ if (!fs.existsSync(path.join(__dirname, 'uploads'))) {
     fs.mkdirSync(path.join(__dirname, 'uploads'), { recursive: true });
 }
 
-// Configuration Multer pour upload d'images
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
-});
+// Configuration Multer pour upload d'images (stockage en memoire pour Cloudinary)
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -605,17 +605,27 @@ app.delete('/api/gallery/:id', authenticateToken, isAdmin, (req, res) => {
     }
 });
 
-// ==================== API UPLOAD ====================
+// ==================== API UPLOAD (Cloudinary) ====================
 
-app.post('/api/upload', authenticateToken, upload.single('image'), (req, res) => {
+app.post('/api/upload', authenticateToken, upload.single('image'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'Aucun fichier uploade' });
         }
+
+        // Upload vers Cloudinary
+        const b64 = Buffer.from(req.file.buffer).toString('base64');
+        const dataURI = 'data:' + req.file.mimetype + ';base64,' + b64;
+
+        const result = await cloudinary.uploader.upload(dataURI, {
+            folder: 'alphamouv',
+            resource_type: 'auto'
+        });
+
         res.json({
             success: true,
-            url: '/uploads/' + req.file.filename,
-            filename: req.file.filename
+            url: result.secure_url,
+            filename: result.public_id
         });
     } catch (error) {
         res.status(500).json({ error: 'Erreur lors de l\'upload' });

@@ -19,7 +19,12 @@ const JWT_SECRET = process.env.JWT_SECRET || 'alphamouv_secret_2024';
 // ==================== CONFIGURATION ====================
 
 // Middleware
-app.use(cors());
+const corsOptions = {
+    origin: process.env.FRONTEND_URL || '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+};
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -43,7 +48,21 @@ const storage = multer.diskStorage({
         cb(null, uniqueSuffix + path.extname(file.originalname));
     }
 });
-const upload = multer({ storage: storage, limits: { fileSize: 10 * 1024 * 1024 } });
+
+const fileFilter = (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Type de fichier non autorise. Utilisez JPG, PNG, GIF ou WebP.'), false);
+    }
+};
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: fileFilter
+});
 
 // ==================== BASE DE DONNEES SQL.JS ====================
 
@@ -653,9 +672,6 @@ initDatabase().then(() => {
     ║     AlphaMouv - Serveur demarre            ║
     ║                                            ║
     ║     URL: http://localhost:${PORT}             ║
-    ║                                            ║
-    ║     Admin: ${process.env.ADMIN_EMAIL || 'admin@alphamouv.com'}
-    ║     Pass:  ${process.env.ADMIN_PASSWORD || 'admin123'}               ║
     ║                                            ║
     ╚════════════════════════════════════════════╝
         `);

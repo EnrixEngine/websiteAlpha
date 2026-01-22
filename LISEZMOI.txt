@@ -24,12 +24,13 @@ INSTALLATION
    http://localhost:3000
 
 
-COMPTE ADMIN PAR DEFAUT
------------------------
-Email : bab.empirevision@gmail.com
-Mot de passe : admin123
+COMPTE ADMIN
+------------
+Configurez vos identifiants admin dans le fichier .env :
+   ADMIN_EMAIL=votre_email@exemple.com
+   ADMIN_PASSWORD=votre_mot_de_passe_securise
 
-(Vous pouvez changer ces informations dans le fichier .env)
+(Voir .env.example pour un modele de configuration)
 
 
 STRUCTURE DU PROJET
@@ -122,7 +123,7 @@ Pour mettre le site en ligne, vous aurez besoin de :
 3. Un certificat SSL (HTTPS)
 4. Eventuellement un service de paiement (Stripe)
 
-Contact : bab.empirevision@gmail.com
+Contact : contact@alphamouv.com
 
 
 ============================================================

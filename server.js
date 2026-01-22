@@ -167,15 +167,25 @@ async function initDatabase() {
         )
     `);
 
-    // Creer admin par defaut s'il n'existe pas
+    // Creer ou mettre a jour admin par defaut
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@alphamouv.com';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    const hashedPassword = bcrypt.hashSync(adminPassword, 10);
+
     const adminResult = db.exec("SELECT id FROM users WHERE role = 'admin'");
     if (adminResult.length === 0 || adminResult[0].values.length === 0) {
-        const hashedPassword = bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'admin123', 10);
+        // Creer l'admin s'il n'existe pas
         db.run(`
             INSERT INTO users (email, password, nom, prenom, role)
             VALUES (?, ?, ?, ?, ?)
-        `, [process.env.ADMIN_EMAIL || 'admin@alphamouv.com', hashedPassword, 'Admin', 'AlphaMouv', 'admin']);
-        console.log('Admin cree par defaut');
+        `, [adminEmail, hashedPassword, 'Admin', 'AlphaMouv', 'admin']);
+        console.log('Admin cree');
+    } else {
+        // Mettre a jour l'email et mot de passe admin
+        db.run(`
+            UPDATE users SET email = ?, password = ? WHERE role = 'admin'
+        `, [adminEmail, hashedPassword]);
+        console.log('Admin mis a jour');
     }
 
     saveDatabase();
@@ -661,6 +671,57 @@ app.get('/api/admin/stats', authenticateToken, isAdmin, (req, res) => {
             newsletter: newsletterCount?.count || 0,
             revenue: revenueResult?.total || 0
         });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// ==================== API GESTION UTILISATEURS (ADMIN) ====================
+
+// Liste tous les utilisateurs
+app.get('/api/admin/users', authenticateToken, isAdmin, (req, res) => {
+    try {
+        const users = dbAll('SELECT id, email, nom, prenom, role, created_at FROM users ORDER BY created_at DESC');
+        res.json(users || []);
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// Supprimer un utilisateur
+app.delete('/api/admin/users/:id', authenticateToken, isAdmin, (req, res) => {
+    try {
+        const userId = req.params.id;
+
+        // Ne pas permettre de supprimer son propre compte
+        if (parseInt(userId) === req.user.id) {
+            return res.status(400).json({ error: 'Impossible de supprimer votre propre compte' });
+        }
+
+        dbRun('DELETE FROM users WHERE id = ?', [userId]);
+        res.json({ success: true, message: 'Utilisateur supprime' });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// Changer le role d'un utilisateur
+app.put('/api/admin/users/:id/role', authenticateToken, isAdmin, (req, res) => {
+    try {
+        const userId = req.params.id;
+        const { role } = req.body;
+
+        if (!['user', 'admin'].includes(role)) {
+            return res.status(400).json({ error: 'Role invalide' });
+        }
+
+        // Ne pas permettre de modifier son propre role
+        if (parseInt(userId) === req.user.id) {
+            return res.status(400).json({ error: 'Impossible de modifier votre propre role' });
+        }
+
+        dbRun('UPDATE users SET role = ? WHERE id = ?', [role, userId]);
+        res.json({ success: true, message: 'Role mis a jour' });
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
     }

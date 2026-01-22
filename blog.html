@@ -8598,106 +8598,15 @@
 
         // Callback appelé après connexion Google réussie
         function handleGoogleCallback(response) {
-            try {
-                // Décoder le JWT token pour obtenir les infos utilisateur
-                const payload = JSON.parse(atob(response.credential.split('.')[1]));
-
-                // Créer l'utilisateur à partir des données Google
-                const googleUser = {
-                    name: payload.name,
-                    email: payload.email,
-                    picture: payload.picture,
-                    googleId: payload.sub,
-                    isGoogleUser: true
-                };
-
-                // Vérifier si l'utilisateur existe déjà
-                let users = JSON.parse(localStorage.getItem('alphamouv_users')) || [];
-                let existingUser = users.find(u => u.email === googleUser.email);
-
-                if (!existingUser) {
-                    // Créer un nouveau compte
-                    const newUser = {
-                        name: googleUser.name,
-                        email: googleUser.email,
-                        picture: googleUser.picture,
-                        googleId: googleUser.googleId,
-                        isGoogleUser: true,
-                        joinDate: new Date().toISOString()
-                    };
-                    users.push(newUser);
-                    localStorage.setItem('alphamouv_users', JSON.stringify(users));
-                }
-
-                // Connecter l'utilisateur
-                currentUser = {
-                    name: googleUser.name,
-                    email: googleUser.email,
-                    picture: googleUser.picture,
-                    isGoogleUser: true
-                };
-                localStorage.setItem('alphamouv_user', JSON.stringify(currentUser));
-
-                closeAuthPopup();
-                initUserInterface();
-
-                // Si l'utilisateur a une photo Google, l'utiliser
-                if (googleUser.picture) {
-                    const avatar = document.getElementById('userAvatar');
-                    avatar.innerHTML = `<img src="${googleUser.picture}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
-                }
-
-                setTimeout(() => {
-                    alert('🎉 Bienvenue ' + currentUser.name + ' !\n\nConnexion réussie avec Google.');
-                }, 300);
-
-            } catch (error) {
-                console.error('Erreur lors du traitement des données Google:', error);
-                alert('❌ Erreur lors de la connexion avec Google.\n\nVeuillez réessayer.');
-            }
+            // La connexion Google nécessite une configuration serveur
+            // Pour l'instant, on affiche un message d'information
+            alert('La connexion avec Google n\'est pas encore disponible.\n\nVeuillez utiliser le formulaire de connexion classique.');
         }
 
         // Simulation de connexion Google (mode démo/développement)
         function simulateGoogleLogin() {
-            // Cette fonction simule une connexion Google pour les tests
-            // Dans un environnement de production, vous devez configurer un vrai Client ID Google
-
-            const demoGoogleUser = {
-                name: prompt('Mode démo Google\n\nEntrez votre nom:', 'Utilisateur Google') || 'Utilisateur Google',
-                email: prompt('Entrez votre email:', 'user@gmail.com') || 'user@gmail.com',
-                picture: null,
-                isGoogleUser: true,
-                googleId: 'demo_' + Date.now()
-            };
-
-            // Vérifier si l'utilisateur existe déjà
-            let users = JSON.parse(localStorage.getItem('alphamouv_users')) || [];
-            let existingUser = users.find(u => u.email === demoGoogleUser.email);
-
-            if (!existingUser) {
-                const newUser = {
-                    ...demoGoogleUser,
-                    joinDate: new Date().toISOString()
-                };
-                users.push(newUser);
-                localStorage.setItem('alphamouv_users', JSON.stringify(users));
-            }
-
-            // Connecter l'utilisateur
-            currentUser = {
-                name: demoGoogleUser.name,
-                email: demoGoogleUser.email,
-                picture: demoGoogleUser.picture,
-                isGoogleUser: true
-            };
-            localStorage.setItem('alphamouv_user', JSON.stringify(currentUser));
-
-            closeAuthPopup();
-            initUserInterface();
-
-            setTimeout(() => {
-                alert('🎉 Bienvenue ' + currentUser.name + ' !\n\n[MODE DÉMO] Connexion Google simulée.\n\nPour activer la vraie connexion Google, configurez votre Client ID dans le code.');
-            }, 300);
+            // La connexion Google nécessite une configuration serveur
+            alert('La connexion avec Google n\'est pas encore disponible.\n\nVeuillez utiliser le formulaire de connexion classique.');
         }
 
         // Ouvrir le pop-up de connexion
@@ -8779,7 +8688,7 @@
         }
 
         // Gérer la soumission du formulaire d'inscription
-        function handleRegisterSubmit(event) {
+        async function handleRegisterSubmit(event) {
             event.preventDefault();
 
             const name = document.getElementById('registerName').value;
@@ -8808,58 +8717,48 @@
                 return;
             }
 
-            // Récupérer les utilisateurs existants
-            const users = JSON.parse(localStorage.getItem('alphamouv_users')) || {};
+            try {
+                // Utiliser l'API pour l'inscription
+                const response = await AlphaMovAPI.Auth.register({
+                    nom: name,
+                    prenom: name.split(' ')[0],
+                    email: email,
+                    password: password,
+                    adresse: address,
+                    code_postal: postalCode,
+                    ville: city,
+                    telephone: phone
+                });
 
-            // Vérifier si l'email existe déjà
-            if (users[email]) {
-                alert('❌ Cet email est déjà utilisé.\n\nConnectez-vous ou utilisez un autre email.');
-                return;
+                if (response.success && response.user) {
+                    // Connexion réussie après inscription
+                    currentUser = {
+                        name: response.user.prenom || response.user.nom || name,
+                        email: response.user.email,
+                        role: response.user.role,
+                        joinDate: response.user.created_at
+                    };
+                    localStorage.setItem('alphamouv_user', JSON.stringify(currentUser));
+
+                    // Fusionner le panier invité
+                    mergeGuestCart();
+
+                    closeAuthPopup();
+                    initUserInterface();
+                    updateCartCount();
+
+                    // Log de création de compte
+                    addLog('success', 'Nouveau compte créé: ' + email);
+
+                    // Message de bienvenue
+                    setTimeout(() => {
+                        alert('🎉 Bienvenue dans la famille AlphaMouv, ' + currentUser.name + ' !\n\nVotre compte a été créé avec succès.');
+                    }, 300);
+                }
+            } catch (error) {
+                console.error('Erreur inscription:', error);
+                alert('❌ Erreur lors de l\'inscription.\n\n' + (error.message || 'Veuillez réessayer.'));
             }
-
-            // Créer le nouvel utilisateur avec adresse
-            const newUser = {
-                name: name,
-                email: email,
-                password: password,
-                address: {
-                    street: address,
-                    street2: address2,
-                    postalCode: postalCode,
-                    city: city,
-                    country: country,
-                    phone: phone
-                },
-                joinDate: new Date().toISOString(),
-                consentDate: new Date().toISOString(),
-                hasConsent: true
-            };
-
-            users[email] = newUser;
-            localStorage.setItem('alphamouv_users', JSON.stringify(users));
-
-            // Connecter automatiquement
-            currentUser = {
-                name: newUser.name,
-                email: newUser.email,
-                joinDate: newUser.joinDate
-            };
-            localStorage.setItem('alphamouv_user', JSON.stringify(currentUser));
-
-            // Fusionner le panier invité
-            mergeGuestCart();
-
-            closeAuthPopup();
-            initUserInterface();
-            updateCartCount();
-
-            // Log de création de compte
-            addLog('success', 'Nouveau compte créé: ' + email);
-
-            // Message de bienvenue
-            setTimeout(() => {
-                alert('🎉 Bienvenue dans la famille AlphaMouv, ' + currentUser.name + ' !\n\nVotre compte a été créé avec succès.');
-            }, 300);
 
             // Réinitialiser le formulaire
             event.target.reset();
@@ -8903,7 +8802,8 @@
             event.preventDefault();
 
             if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
-                localStorage.removeItem('alphamouv_user');
+                // Utiliser l'API pour la déconnexion
+                AlphaMovAPI.Auth.logout();
                 currentUser = null;
 
                 initUserInterface();
@@ -8916,23 +8816,24 @@
         // ============ FONCTIONS RGPD (DROITS DES UTILISATEURS) ============
 
         // Exporter les données personnelles de l'utilisateur (Droit à la portabilité)
-        function exportMyData() {
+        async function exportMyData() {
             try {
                 if (!currentUser) {
                     alert('❌ Vous devez être connecté pour exporter vos données.');
                     return;
                 }
 
-                // Récupérer toutes les données de l'utilisateur
-                const users = JSON.parse(localStorage.getItem('alphamouv_users')) || {};
-                let userData = users[currentUser.email];
-
-                // Si aucune userData n'existe (compte admin ou incomplet), créer un objet de base
-                if (!userData) {
+                // Récupérer les données de l'utilisateur depuis l'API
+                let userData;
+                try {
+                    const profileResponse = await AlphaMovAPI.Auth.getProfile();
+                    userData = profileResponse.user || profileResponse;
+                } catch (e) {
+                    // Fallback sur les données locales
                     userData = {
                         email: currentUser.email,
                         name: currentUser.name || 'Non renseigné',
-                        joinDate: new Date().toISOString(),
+                        joinDate: currentUser.joinDate || new Date().toISOString(),
                         hasConsent: true
                     };
                 }
@@ -9188,39 +9089,22 @@
 
             const userEmail = currentUser.email;
 
-            // Supprimer de la liste des utilisateurs
-            const users = JSON.parse(localStorage.getItem('alphamouv_users')) || {};
-            delete users[userEmail];
-            localStorage.setItem('alphamouv_users', JSON.stringify(users));
-
-            // Supprimer des bannis (si présent)
-            let bannedUsers = JSON.parse(localStorage.getItem('alphamouv_banned_users')) || [];
-            bannedUsers = bannedUsers.filter(e => e !== userEmail);
-            localStorage.setItem('alphamouv_banned_users', JSON.stringify(bannedUsers));
-
-            // Supprimer des admins (si présent)
-            const adminData = JSON.parse(localStorage.getItem('alphamouv_admin')) || {
-                admins: []
-            };
-            adminData.admins = adminData.admins.filter(e => e !== userEmail);
-            localStorage.setItem('alphamouv_admin', JSON.stringify(adminData));
-
-            // Vider le panier
+            // Vider le panier local
             localStorage.removeItem('alphamouv_cart');
 
-            // Déconnecter l'utilisateur
-            localStorage.removeItem('alphamouv_user');
+            // Déconnecter l'utilisateur via l'API
+            AlphaMovAPI.Auth.logout();
             currentUser = null;
 
             // Log de suppression
-            addLog('warning', 'Compte supprimé (droit à l\'oubli): ' + userEmail);
+            addLog('warning', 'Demande de suppression de compte: ' + userEmail);
 
             // Fermer les modales
             closeSettingsModal();
             initUserInterface();
 
-            // Message final
-            alert('✅ Votre compte a été définitivement supprimé\n\nToutes vos données ont été effacées conformément au RGPD (droit à l\'oubli).\n\nMerci d\'avoir utilisé AlphaMouv.\n\nVous pouvez créer un nouveau compte à tout moment.');
+            // Message final - informer que la suppression serveur doit être demandée
+            alert('✅ Vous avez été déconnecté et vos données locales ont été supprimées.\n\nPour la suppression complète de vos données serveur conformément au RGPD, veuillez nous contacter via le formulaire de contact.\n\nMerci d\'avoir utilisé AlphaMouv.');
         }
 
         // ============ SYSTÈME DE COLLECTE DE DONNÉES (RGPD COMPLIANT) ============
@@ -10062,7 +9946,7 @@
         }
 
         // Sauvegarder les paramètres du compte
-        function saveAccountSettings() {
+        async function saveAccountSettings() {
             const firstName = document.getElementById('settingsFirstName').value.trim();
             const lastName = document.getElementById('settingsLastName').value.trim();
 
@@ -10071,27 +9955,39 @@
                 return;
             }
 
-            // Mettre à jour l'utilisateur
-            currentUser.firstName = firstName;
-            currentUser.lastName = lastName;
-            currentUser.name = firstName + (lastName ? ' ' + lastName : '');
-            currentUser.address = document.getElementById('settingsAddress').value.trim();
-            currentUser.addressComplement = document.getElementById('settingsAddressComplement').value.trim();
-            currentUser.postalCode = document.getElementById('settingsPostalCode').value.trim();
-            currentUser.city = document.getElementById('settingsCity').value.trim();
-            currentUser.country = document.getElementById('settingsCountry').value.trim();
+            try {
+                // Utiliser l'API pour mettre à jour le profil
+                const profileData = {
+                    prenom: firstName,
+                    nom: lastName,
+                    adresse: document.getElementById('settingsAddress').value.trim(),
+                    code_postal: document.getElementById('settingsPostalCode').value.trim(),
+                    ville: document.getElementById('settingsCity').value.trim()
+                };
 
-            // Sauvegarder
-            saveUserData();
+                await AlphaMovAPI.Auth.updateProfile(profileData);
 
-            // Rafraîchir l'interface
-            initUserInterface();
+                // Mettre à jour localement
+                currentUser.firstName = firstName;
+                currentUser.lastName = lastName;
+                currentUser.name = firstName + (lastName ? ' ' + lastName : '');
+                currentUser.address = profileData.adresse;
+                currentUser.postalCode = profileData.code_postal;
+                currentUser.city = profileData.ville;
+                saveUserData();
 
-            showSettingsMessage('Vos informations ont été mises à jour avec succès !', 'success');
+                // Rafraîchir l'interface
+                initUserInterface();
+
+                showSettingsMessage('Vos informations ont été mises à jour avec succès !', 'success');
+            } catch (error) {
+                console.error('Erreur mise à jour profil:', error);
+                showSettingsMessage(error.message || 'Erreur lors de la mise à jour', 'error');
+            }
         }
 
         // Changer l'email
-        function changeEmail() {
+        async function changeEmail() {
             const newEmail = document.getElementById('settingsNewEmail').value.trim();
             const password = document.getElementById('settingsEmailPassword').value;
 
@@ -10110,43 +10006,27 @@
                 return;
             }
 
-            // Vérifier le mot de passe
-            if (currentUser.password !== password) {
-                showSettingsMessage('Mot de passe incorrect', 'error');
-                return;
+            try {
+                // Utiliser l'API pour mettre à jour l'email
+                const response = await AlphaMovAPI.Auth.updateProfile({ email: newEmail });
+
+                if (response.success) {
+                    // Mettre à jour localement
+                    currentUser.email = newEmail;
+                    localStorage.setItem('alphamouv_user', JSON.stringify(currentUser));
+
+                    // Rafraîchir l'interface
+                    document.getElementById('settingsCurrentEmail').value = newEmail;
+                    document.getElementById('settingsNewEmail').value = '';
+                    document.getElementById('settingsEmailPassword').value = '';
+                    initUserInterface();
+
+                    showSettingsMessage('Votre email a été mis à jour avec succès !', 'success');
+                }
+            } catch (error) {
+                console.error('Erreur changement email:', error);
+                showSettingsMessage(error.message || 'Erreur lors du changement d\'email', 'error');
             }
-
-            // Vérifier que l'email n'est pas déjà utilisé
-            const users = JSON.parse(localStorage.getItem('alphamouv_users')) || [];
-            if (users.some(function(u) {
-                    return u.email === newEmail && u.email !== currentUser.email;
-                })) {
-                showSettingsMessage('Cet email est déjà utilisé', 'error');
-                return;
-            }
-
-            // Mettre à jour l'email
-            const oldEmail = currentUser.email;
-            currentUser.email = newEmail;
-
-            // Mettre à jour dans la liste des utilisateurs
-            const userIndex = users.findIndex(function(u) {
-                return u.email === oldEmail;
-            });
-            if (userIndex !== -1) {
-                users[userIndex].email = newEmail;
-                localStorage.setItem('alphamouv_users', JSON.stringify(users));
-            }
-
-            saveUserData();
-
-            // Rafraîchir l'interface
-            document.getElementById('settingsCurrentEmail').value = newEmail;
-            document.getElementById('settingsNewEmail').value = '';
-            document.getElementById('settingsEmailPassword').value = '';
-            initUserInterface();
-
-            showSettingsMessage('Votre email a été mis à jour avec succès !', 'success');
         }
 
         // Vérifier si l'email est valide
@@ -10155,7 +10035,7 @@
         }
 
         // Changer le mot de passe
-        function changePassword() {
+        async function changePassword() {
             const currentPassword = document.getElementById('settingsCurrentPassword').value;
             const newPassword = document.getElementById('settingsNewPassword').value;
             const confirmPassword = document.getElementById('settingsConfirmPassword').value;
@@ -10175,48 +10055,25 @@
                 return;
             }
 
-            // Vérifier le mot de passe actuel
-            if (currentUser.password !== currentPassword) {
-                showSettingsMessage('Mot de passe actuel incorrect', 'error');
-                return;
+            try {
+                // Utiliser l'API pour changer le mot de passe
+                await AlphaMovAPI.Auth.changePassword(currentPassword, newPassword);
+
+                // Réinitialiser les champs
+                document.getElementById('settingsCurrentPassword').value = '';
+                document.getElementById('settingsNewPassword').value = '';
+                document.getElementById('settingsConfirmPassword').value = '';
+
+                showSettingsMessage('Votre mot de passe a été mis à jour avec succès !', 'success');
+            } catch (error) {
+                console.error('Erreur changement mot de passe:', error);
+                showSettingsMessage(error.message || 'Mot de passe actuel incorrect', 'error');
             }
-
-            // Mettre à jour le mot de passe
-            currentUser.password = newPassword;
-
-            // Mettre à jour dans la liste des utilisateurs
-            const users = JSON.parse(localStorage.getItem('alphamouv_users')) || [];
-            const userIndex = users.findIndex(function(u) {
-                return u.email === currentUser.email;
-            });
-            if (userIndex !== -1) {
-                users[userIndex].password = newPassword;
-                localStorage.setItem('alphamouv_users', JSON.stringify(users));
-            }
-
-            saveUserData();
-
-            // Réinitialiser les champs
-            document.getElementById('settingsCurrentPassword').value = '';
-            document.getElementById('settingsNewPassword').value = '';
-            document.getElementById('settingsConfirmPassword').value = '';
-
-            showSettingsMessage('Votre mot de passe a été mis à jour avec succès !', 'success');
         }
 
-        // Sauvegarder les données utilisateur
+        // Sauvegarder les données utilisateur (localement)
         function saveUserData() {
             localStorage.setItem('alphamouv_user', JSON.stringify(currentUser));
-
-            // Mettre à jour aussi dans la liste des utilisateurs
-            const users = JSON.parse(localStorage.getItem('alphamouv_users')) || [];
-            const userIndex = users.findIndex(function(u) {
-                return u.email === currentUser.email;
-            });
-            if (userIndex !== -1) {
-                Object.assign(users[userIndex], currentUser);
-                localStorage.setItem('alphamouv_users', JSON.stringify(users));
-            }
         }
 
         // Toggle 2FA
@@ -12194,97 +12051,98 @@
         }
 
         // Load Users Section
-        function loadUsersSection() {
+        async function loadUsersSection() {
             var container = document.getElementById('usersContent');
-            const users = JSON.parse(localStorage.getItem('alphamouv_users')) || [];
-            const adminData = JSON.parse(localStorage.getItem('alphamouv_admin')) || {};
-            const currentUser = JSON.parse(localStorage.getItem('alphamouv_user'));
+            const currentUserData = JSON.parse(localStorage.getItem('alphamouv_user'));
 
-            var html = `<div style="display: grid; gap: 15px;">`;
+            try {
+                // Charger les utilisateurs depuis l'API
+                const users = await AlphaMovAPI.Users.getAll();
 
-            users.forEach(user => {
-                        const isAdmin = adminData.admins && adminData.admins.includes(user.email);
-                        const isCurrentUser = currentUser && currentUser.email === user.email;
-                        const avatarHtml = generateUserAvatar(user);
+                var html = `<div style="display: grid; gap: 15px;">`;
 
-                        html += `
-                    <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; border: 1px solid rgba(255,255,255,0.1);">
-                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
-                            ${avatarHtml}
-                            <div style="flex: 1;">
-                                <h4 style="color: #ddac0b; margin-bottom: 5px; font-size: 1.1em;">${user.name} ${isCurrentUser ? '(Vous)' : ''}</h4>
-                                <p style="color: rgba(255,255,255,0.6); font-size: 0.9em; margin-bottom: 8px;">${user.email}</p>
-                                ${isAdmin ? '<span style="display: inline-block; padding: 4px 12px; background: rgba(221, 172, 11, 0.2); color: #ddac0b; border-radius: 12px; font-size: 0.8em; font-weight: 600;">Admin</span>' : '<span style="display: inline-block; padding: 4px 12px; background: rgba(255, 255, 255, 0.1); color: rgba(255,255,255,0.6); border-radius: 12px; font-size: 0.8em;">Utilisateur</span>'}
+                users.forEach(user => {
+                    const isAdmin = user.role === 'admin';
+                    const isCurrentUser = currentUserData && currentUserData.email === user.email;
+                    const avatarHtml = generateUserAvatar({ name: user.prenom || user.nom || user.email, email: user.email });
+
+                    html += `
+                        <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; border: 1px solid rgba(255,255,255,0.1);">
+                            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                                ${avatarHtml}
+                                <div style="flex: 1;">
+                                    <h4 style="color: #ddac0b; margin-bottom: 5px; font-size: 1.1em;">${user.prenom || ''} ${user.nom || user.email} ${isCurrentUser ? '(Vous)' : ''}</h4>
+                                    <p style="color: rgba(255,255,255,0.6); font-size: 0.9em; margin-bottom: 8px;">${user.email}</p>
+                                    ${isAdmin ? '<span style="display: inline-block; padding: 4px 12px; background: rgba(221, 172, 11, 0.2); color: #ddac0b; border-radius: 12px; font-size: 0.8em; font-weight: 600;">Admin</span>' : '<span style="display: inline-block; padding: 4px 12px; background: rgba(255, 255, 255, 0.1); color: rgba(255,255,255,0.6); border-radius: 12px; font-size: 0.8em;">Utilisateur</span>'}
+                                </div>
                             </div>
+                            ${!isCurrentUser ? `
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    ${!isAdmin ? `
+                                        <button onclick="promoteToAdmin(${user.id})" style="padding: 8px 16px; background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 6px; cursor: pointer; font-size: 0.85em;">
+                                            Promouvoir Admin
+                                        </button>
+                                    ` : `
+                                        <button onclick="demoteFromAdmin(${user.id})" style="padding: 8px 16px; background: rgba(234, 179, 8, 0.2); color: #fbbf24; border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 6px; cursor: pointer; font-size: 0.85em;">
+                                            Rétrograder
+                                        </button>
+                                    `}
+                                    <button onclick="deleteUser(${user.id})" style="padding: 8px 16px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; cursor: pointer; font-size: 0.85em;">
+                                        Supprimer l'utilisateur
+                                    </button>
+                                </div>
+                            ` : ''}
                         </div>
-                        ${!isCurrentUser ? `
-                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                ${!isAdmin ? `
-                                    <button onclick="promoteToAdmin('${user.email}')" style="padding: 8px 16px; background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 6px; cursor: pointer; font-size: 0.85em;">
-                                        Promouvoir Admin
-                                    </button>
-                                ` : `
-                                    <button onclick="demoteFromAdmin('${user.email}')" style="padding: 8px 16px; background: rgba(234, 179, 8, 0.2); color: #fbbf24; border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 6px; cursor: pointer; font-size: 0.85em;">
-                                        Rétrograder
-                                    </button>
-                                `}
-                                <button onclick="deleteUser('${user.email}')" style="padding: 8px 16px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; cursor: pointer; font-size: 0.85em;">
-                                    Supprimer l'utilisateur
-                                </button>
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-            });
+                    `;
+                });
 
-            html += '</div>';
-            container.innerHTML = html;
+                html += '</div>';
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Erreur chargement utilisateurs:', error);
+                container.innerHTML = '<p style="color: #f87171;">Erreur lors du chargement des utilisateurs</p>';
+            }
         }
 
         // Promote user to admin
-        function promoteToAdmin(email) {
+        async function promoteToAdmin(userId) {
             if (confirm('Êtes-vous sûr de vouloir promouvoir cet utilisateur en admin ?')) {
-                const adminData = JSON.parse(localStorage.getItem('alphamouv_admin')) || {};
-                if (!adminData.admins) adminData.admins = [];
-
-                if (!adminData.admins.includes(email)) {
-                    adminData.admins.push(email);
-                    localStorage.setItem('alphamouv_admin', JSON.stringify(adminData));
+                try {
+                    await AlphaMovAPI.Users.updateRole(userId, 'admin');
                     loadUsersSection();
-                    addLog('success', `Utilisateur ${email} promu admin`);
+                    addLog('success', `Utilisateur promu admin`);
+                } catch (error) {
+                    console.error('Erreur promotion admin:', error);
+                    alert('Erreur lors de la promotion: ' + (error.message || 'Erreur serveur'));
                 }
             }
         }
 
         // Demote user from admin
-        function demoteFromAdmin(email) {
+        async function demoteFromAdmin(userId) {
             if (confirm('Êtes-vous sûr de vouloir rétrograder cet admin ?')) {
-                const adminData = JSON.parse(localStorage.getItem('alphamouv_admin')) || {};
-                if (adminData.admins) {
-                    adminData.admins = adminData.admins.filter(a => a !== email);
-                    localStorage.setItem('alphamouv_admin', JSON.stringify(adminData));
+                try {
+                    await AlphaMovAPI.Users.updateRole(userId, 'user');
                     loadUsersSection();
-                    addLog('warning', `Admin ${email} rétrogradé`);
+                    addLog('warning', `Admin rétrogradé`);
+                } catch (error) {
+                    console.error('Erreur rétrogradation:', error);
+                    alert('Erreur lors de la rétrogradation: ' + (error.message || 'Erreur serveur'));
                 }
             }
         }
 
         // Delete user
-        function deleteUser(email) {
+        async function deleteUser(userId) {
             if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.')) {
-                let users = JSON.parse(localStorage.getItem('alphamouv_users')) || [];
-                users = users.filter(u => u.email !== email);
-                localStorage.setItem('alphamouv_users', JSON.stringify(users));
-
-                // Also remove from admins if present
-                const adminData = JSON.parse(localStorage.getItem('alphamouv_admin')) || {};
-                if (adminData.admins) {
-                    adminData.admins = adminData.admins.filter(a => a !== email);
-                    localStorage.setItem('alphamouv_admin', JSON.stringify(adminData));
+                try {
+                    await AlphaMovAPI.Users.delete(userId);
+                    loadUsersSection();
+                    addLog('error', `Utilisateur supprimé`);
+                } catch (error) {
+                    console.error('Erreur suppression:', error);
+                    alert('Erreur lors de la suppression: ' + (error.message || 'Erreur serveur'));
                 }
-
-                loadUsersSection();
-                addLog('error', `Utilisateur ${email} supprimé`);
             }
         }
 
@@ -14694,65 +14552,53 @@
         // ============ MODÉRATION DES UTILISATEURS ============
 
         // Charger les utilisateurs pour la modération
-        function loadModerationUsers(filter) {
+        async function loadModerationUsers(filter) {
             var container = document.getElementById('moderationUsersList');
-            const users = JSON.parse(localStorage.getItem('alphamouv_users')) || {};
-            const bannedUsers = JSON.parse(localStorage.getItem('alphamouv_banned_users')) || [];
-            const adminData = JSON.parse(localStorage.getItem('alphamouv_admin')) || { admins: [] };
 
-            var html = '';
-            let userCount = 0;
+            try {
+                const users = await AlphaMovAPI.Users.getAll();
 
-            for (let email in users) {
-                const user = users[email];
-                const isBanned = bannedUsers.includes(email);
-                const isAdmin = adminData.admins.includes(email);
+                var html = '';
+                let userCount = 0;
 
-                // Filtrer selon le type
-                if (filter === 'banned' && !isBanned) continue;
-                if (filter === 'active' && isBanned) continue;
+                users.forEach(user => {
+                    const isAdmin = user.role === 'admin';
 
-                userCount++;
+                    userCount++;
 
-                html += '<div class="moderation-user-card' + (isBanned ? ' banned' : '') + '">';
-                html += '<div class="moderation-user-info">';
-                html += '<h4>' + user.name + '</h4>';
-                html += '<p>' + email + '</p>';
+                    html += '<div class="moderation-user-card">';
+                    html += '<div class="moderation-user-info">';
+                    html += '<h4>' + (user.prenom || '') + ' ' + (user.nom || user.email) + '</h4>';
+                    html += '<p>' + user.email + '</p>';
 
-                html += '<div class="moderation-user-badges">';
-                if (isAdmin) {
-                    html += '<span class="moderation-badge admin">⚡ Administrateur</span>';
-                }
-                if (isBanned) {
-                    html += '<span class="moderation-badge banned">🚫 Banni</span>';
-                } else {
-                    html += '<span class="moderation-badge active">✅ Actif</span>';
-                }
-                html += '</div>';
+                    html += '<div class="moderation-user-badges">';
+                    if (isAdmin) {
+                        html += '<span class="moderation-badge admin">⚡ Administrateur</span>';
+                    } else {
+                        html += '<span class="moderation-badge active">✅ Actif</span>';
+                    }
+                    html += '</div>';
 
-                html += '</div>';
+                    html += '</div>';
 
-                html += '<div class="moderation-user-actions">';
+                    html += '<div class="moderation-user-actions">';
+                    html += '<button class="moderation-action-btn delete" onclick="deleteUser(' + user.id + ')">🗑️ Supprimer</button>';
+                    html += '</div>';
 
-                if (isBanned) {
-                    html += '<button class="moderation-action-btn unban" onclick="unbanUser(\'' + email + '\')">Débannir</button>';
-                } else {
-                    html += '<button class="moderation-action-btn ban" onclick="banUser(\'' + email + '\')">Bannir</button>';
+                    html += '</div>';
+                });
+
+                if (userCount === 0) {
+                    html = '<div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.6);">';
+                    html += '<p style="font-size: 1.2em; margin: 0;">Aucun utilisateur trouvé</p>';
+                    html += '</div>';
                 }
 
-                html += '<button class="moderation-action-btn delete" onclick="deleteUser(\'' + email + '\')">🗑️ Supprimer</button>';
-                html += '</div>';
-
-                html += '</div>';
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Erreur chargement utilisateurs:', error);
+                container.innerHTML = '<p style="color: #f87171; text-align: center;">Erreur lors du chargement des utilisateurs</p>';
             }
-
-            if (userCount === 0) {
-                html = '<div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.6);">';
-                html += '<p style="font-size: 1.2em; margin: 0;">Aucun utilisateur trouvé</p>';
-                html += '</div>';
-            }
-
-            container.innerHTML = html;
         }
 
         // Bannir un utilisateur
@@ -14794,38 +14640,8 @@
             loadModerationUsers('all');
         }
 
-        // Supprimer un utilisateur
-        function deleteUser(email) {
-            if (!confirm('ATTENTION: Supprimer définitivement l\'utilisateur ' + email + ' ?\n\nCette action est irréversible et supprimera:\n- Le compte utilisateur\n- Son panier\n- Ses commandes\n- Toutes ses données')) {
-                return;
-            }
-
-            // Double confirmation
-            if (!confirm('Êtes-vous absolument sûr ? Cette action ne peut pas être annulée.')) {
-                return;
-            }
-
-            // Supprimer l'utilisateur
-            const users = JSON.parse(localStorage.getItem('alphamouv_users')) || {};
-            delete users[email];
-            localStorage.setItem('alphamouv_users', JSON.stringify(users));
-
-            // Retirer des bannis si présent
-            let bannedUsers = JSON.parse(localStorage.getItem('alphamouv_banned_users')) || [];
-            bannedUsers = bannedUsers.filter(function(e) { return e !== email; });
-            localStorage.setItem('alphamouv_banned_users', JSON.stringify(bannedUsers));
-
-            // Retirer des admins si présent
-            const adminData = JSON.parse(localStorage.getItem('alphamouv_admin')) || { admins: [] };
-            adminData.admins = adminData.admins.filter(function(e) { return e !== email; });
-            localStorage.setItem('alphamouv_admin', JSON.stringify(adminData));
-
-            addLog('error', 'Utilisateur supprimé: ' + email);
-            alert('✅ L\'utilisateur ' + email + ' a été définitivement supprimé.');
-
-            // Recharger la liste
-            loadModerationUsers('all');
-        }
+        // Supprimer un utilisateur (modération) - utilise deleteUser défini plus haut
+        // Cette fonction est remplacée par la version API dans loadUsersSection
 
         // Vérifier si l'utilisateur est banni lors de la connexion
         function checkUserBanned(email) {

@@ -303,6 +303,30 @@ const StatsAPI = {
     },
 };
 
+// ==================== UTILISATEURS (ADMIN) ====================
+
+const UsersAPI = {
+    // Liste des utilisateurs
+    async getAll() {
+        return await apiRequest('/admin/users');
+    },
+
+    // Supprimer un utilisateur
+    async delete(id) {
+        return await apiRequest(`/admin/users/${id}`, {
+            method: 'DELETE',
+        });
+    },
+
+    // Changer le role d'un utilisateur
+    async updateRole(id, role) {
+        return await apiRequest(`/admin/users/${id}/role`, {
+            method: 'PUT',
+            body: JSON.stringify({ role }),
+        });
+    },
+};
+
 // ==================== EXPORT ====================
 
 // Pour utilisation dans le navigateur
@@ -316,6 +340,7 @@ window.AlphaMovAPI = {
     Upload: UploadAPI,
     Contact: ContactAPI,
     Stats: StatsAPI,
+    Users: UsersAPI,
     setAuthToken,
     getAuthToken,
     isLoggedIn: AuthAPI.isLoggedIn,

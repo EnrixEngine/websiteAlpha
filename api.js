@@ -3,7 +3,10 @@
  * Gestion des communications avec le backend
  */
 
-const API_URL = 'http://localhost:3000/api';
+// Detecte automatiquement l'URL (localhost ou production)
+const API_URL = window.location.hostname === 'localhost'
+    ? 'http://localhost:3000/api'
+    : window.location.origin + '/api';
 
 // Stockage du token
 let authToken = localStorage.getItem('alphamouv_token');

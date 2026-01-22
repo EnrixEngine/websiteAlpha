@@ -7789,7 +7789,7 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; pointer-events: none;">
                         <div>
                             <h4 class="event-title" style="color: #ddac0b; font-size: 1.3em; margin-bottom: 8px; font-weight: 700;">Exposition "Mouvement Créatif"</h4>
-                            <p class="event-location" style="color: rgba(255, 255, 255, 0.8); margin-bottom: 5px;">📍 Galerie d'Art Moderne - Paris</p>
+                            <p class="event-location" style="color: rgba(255, 255, 255, 0.8); margin-bottom: 5px;">Galerie d'Art Moderne - Paris</p>
                             <p class="event-description" style="color: rgba(255, 255, 255, 0.6); font-size: 0.95em;">Collection complète de mes dernières créations vestimentaires</p>
                         </div>
                         <div style="background: rgba(221, 172, 11, 0.2); padding: 15px 25px; border-radius: 10px; text-align: center; min-width: 120px;">
@@ -7803,7 +7803,7 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; pointer-events: none;">
                         <div>
                             <h4 class="event-title" style="color: #ddac0b; font-size: 1.3em; margin-bottom: 8px; font-weight: 700;">Atelier Créatif Ouvert</h4>
-                            <p class="event-location" style="color: rgba(255, 255, 255, 0.8); margin-bottom: 5px;">📍 Studio AlphaMouv</p>
+                            <p class="event-location" style="color: rgba(255, 255, 255, 0.8); margin-bottom: 5px;">Studio AlphaMouv</p>
                             <p class="event-description" style="color: rgba(255, 255, 255, 0.6); font-size: 0.95em;">Venez découvrir mon processus créatif et échanger autour de l'art vestimentaire</p>
                         </div>
                         <div style="background: rgba(221, 172, 11, 0.2); padding: 15px 25px; border-radius: 10px; text-align: center; min-width: 120px;">
@@ -7815,7 +7815,7 @@
 
                 <div style="text-align: center; margin-top: 30px;">
                     <p style="color: rgba(255, 255, 255, 0.7); font-style: italic;">
-                        💡 Restez connecté sur mes réseaux sociaux pour ne manquer aucun évènement !
+                        Restez connecté sur mes réseaux sociaux pour ne manquer aucun évènement !
                     </p>
                 </div>
             </div>
@@ -7824,7 +7824,7 @@
             <div class="main-card" style="margin-top: 40px;">
                 <div style="text-align: center; margin-bottom: 40px;">
                     <h3 style="color: #ddac0b; font-size: 2em; margin-bottom: 15px; font-family: 'Montserrat', sans-serif; font-weight: 700;">
-                        📸 Suivez mon actualité
+                        Suivez mon actualité
                     </h3>
                     <p style="color: rgba(255, 255, 255, 0.8); font-size: 1.1em; max-width: 700px; margin: 0 auto;">
                         Découvrez mes dernières créations, coulisses et inspirations sur Instagram
@@ -7861,7 +7861,7 @@
 
                 <!-- Message si aucun post -->
                 <div id="noInstagramPosts" style="text-align: center; padding: 60px 20px; color: rgba(255, 255, 255, 0.5);">
-                    <p style="font-size: 1.2em; margin-bottom: 10px;">📱 Aucun post Instagram pour le moment</p>
+                    <p style="font-size: 1.2em; margin-bottom: 10px;">Aucun post Instagram pour le moment</p>
                     <p style="font-size: 0.9em;">Les derniers posts apparaîtront ici</p>
                 </div>
 
@@ -8053,7 +8053,7 @@
 
         <!-- Footer -->
         <footer>
-            <p>© 2026 AlphaMouv - Artiste Créateur | Fait avec passion ✨</p>
+            <p>© 2026 AlphaMouv - Artiste Créateur | Fait avec passion</p>
             <p style="font-size: 0.9em; color: rgba(255, 255, 255, 0.6);">Toutes les créations sont des œuvres originales et protégées</p>
         </footer>
     </div>
@@ -8675,12 +8675,12 @@
 
                     // Message de bienvenue
                     setTimeout(() => {
-                        alert('🎉 Bienvenue ' + currentUser.name + ' !\n\nVous êtes maintenant connecté(e) à votre espace AlphaMouv.');
+                        alert(' Bienvenue ' + currentUser.name + ' !\n\nVous êtes maintenant connecté(e) à votre espace AlphaMouv.');
                     }, 300);
                 }
             } catch (error) {
                 console.error('Erreur connexion:', error);
-                alert('❌ Email ou mot de passe incorrect.\n\nVeuillez réessayer ou créer un compte.');
+                alert(' Email ou mot de passe incorrect.\n\nVeuillez réessayer ou créer un compte.');
             }
 
             // Réinitialiser le formulaire
@@ -8707,13 +8707,13 @@
             // Vérifier le consentement RGPD
             const consent = document.getElementById('registerConsent').checked;
             if (!consent) {
-                alert('❌ Vous devez accepter la collecte de vos données pour créer un compte.\n\nCeci est nécessaire pour la gestion de vos commandes et livraisons.');
+                alert(' Vous devez accepter la collecte de vos données pour créer un compte.\n\nCeci est nécessaire pour la gestion de vos commandes et livraisons.');
                 return;
             }
 
             // Vérifier que les mots de passe correspondent
             if (password !== confirmPassword) {
-                alert('❌ Les mots de passe ne correspondent pas.\n\nVeuillez réessayer.');
+                alert(' Les mots de passe ne correspondent pas.\n\nVeuillez réessayer.');
                 return;
             }
 
@@ -8752,12 +8752,12 @@
 
                     // Message de bienvenue
                     setTimeout(() => {
-                        alert('🎉 Bienvenue dans la famille AlphaMouv, ' + currentUser.name + ' !\n\nVotre compte a été créé avec succès.');
+                        alert(' Bienvenue dans la famille AlphaMouv, ' + currentUser.name + ' !\n\nVotre compte a été créé avec succès.');
                     }, 300);
                 }
             } catch (error) {
                 console.error('Erreur inscription:', error);
-                alert('❌ Erreur lors de l\'inscription.\n\n' + (error.message || 'Veuillez réessayer.'));
+                alert(' Erreur lors de l\'inscription.\n\n' + (error.message || 'Veuillez réessayer.'));
             }
 
             // Réinitialiser le formulaire
@@ -8809,7 +8809,7 @@
                 initUserInterface();
                 toggleUserDropdown();
 
-                alert('👋 Vous avez été déconnecté(e) avec succès.\n\nÀ bientôt sur AlphaMouv !');
+                alert(' Vous avez été déconnecté(e) avec succès.\n\nÀ bientôt sur AlphaMouv !');
             }
         }
 
@@ -8819,7 +8819,7 @@
         async function exportMyData() {
             try {
                 if (!currentUser) {
-                    alert('❌ Vous devez être connecté pour exporter vos données.');
+                    alert(' Vous devez être connecté pour exporter vos données.');
                     return;
                 }
 
@@ -9054,18 +9054,18 @@
 
                 addLog('info', 'Export PDF des données par: ' + currentUser.email);
 
-                alert('✅ Vos données ont été exportées avec succès !\n\n📄 Le fichier PDF a été téléchargé et contient toutes vos informations personnelles conformément au RGPD.');
+                alert(' Vos données ont été exportées avec succès !\n\n📄 Le fichier PDF a été téléchargé et contient toutes vos informations personnelles conformément au RGPD.');
 
             } catch (error) {
                 console.error('Erreur lors de l\'export:', error);
-                alert('❌ Une erreur est survenue lors de l\'export de vos données.\n\nDétails: ' + error.message + '\n\nVeuillez réessayer ou nous contacter si le problème persiste.');
+                alert(' Une erreur est survenue lors de l\'export de vos données.\n\nDétails: ' + error.message + '\n\nVeuillez réessayer ou nous contacter si le problème persiste.');
             }
         }
 
         // Supprimer le compte utilisateur (Droit à l'oubli)
         function deleteMyAccount() {
             if (!currentUser) {
-                alert('❌ Vous devez être connecté pour supprimer votre compte.');
+                alert(' Vous devez être connecté pour supprimer votre compte.');
                 return;
             }
 
@@ -9083,7 +9083,7 @@
             const finalConfirm = prompt('Pour confirmer la suppression définitive, tapez votre email :\n\n' + currentUser.email);
 
             if (finalConfirm !== currentUser.email) {
-                alert('❌ Email incorrect. Suppression annulée.');
+                alert(' Email incorrect. Suppression annulée.');
                 return;
             }
 
@@ -9104,7 +9104,7 @@
             initUserInterface();
 
             // Message final - informer que la suppression serveur doit être demandée
-            alert('✅ Vous avez été déconnecté et vos données locales ont été supprimées.\n\nPour la suppression complète de vos données serveur conformément au RGPD, veuillez nous contacter via le formulaire de contact.\n\nMerci d\'avoir utilisé AlphaMouv.');
+            alert(' Vous avez été déconnecté et vos données locales ont été supprimées.\n\nPour la suppression complète de vos données serveur conformément au RGPD, veuillez nous contacter via le formulaire de contact.\n\nMerci d\'avoir utilisé AlphaMouv.');
         }
 
         // ============ SYSTÈME DE COLLECTE DE DONNÉES (RGPD COMPLIANT) ============
@@ -9501,7 +9501,7 @@
                 itemsList += '- ' + item.name + ' (x' + (item.quantity || 1) + ')\n';
             });
 
-            alert('🎉 Commande confirmée !\n\nArticles:\n' + itemsList + '\nTotal: ' + total + '€\n\nMerci pour votre commande ! Vous allez recevoir un email de confirmation.');
+            alert(' Commande confirmée !\n\nArticles:\n' + itemsList + '\nTotal: ' + total + '€\n\nMerci pour votre commande ! Vous allez recevoir un email de confirmation.');
 
             // Vider le panier
             saveCart([]);
@@ -12501,7 +12501,7 @@
 
             // Vérifier que c'est bien une image
             if (!file.type.startsWith('image/')) {
-                alert('❌ Erreur: Veuillez sélectionner un fichier image valide (JPG, PNG, GIF, WebP, etc.)');
+                alert(' Erreur: Veuillez sélectionner un fichier image valide (JPG, PNG, GIF, WebP, etc.)');
                 event.target.value = '';
                 return;
             }
@@ -12509,7 +12509,7 @@
             // Vérifier la taille (max 5MB)
             const maxSize = 5 * 1024 * 1024; // 5MB
             if (file.size > maxSize) {
-                alert('❌ Erreur: L\'image est trop volumineuse.\n\nTaille maximale: 5MB\nTaille actuelle: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB\n\nVeuillez compresser ou réduire l\'image avant de l\'uploader.');
+                alert(' Erreur: L\'image est trop volumineuse.\n\nTaille maximale: 5MB\nTaille actuelle: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB\n\nVeuillez compresser ou réduire l\'image avant de l\'uploader.');
                 event.target.value = '';
                 return;
             }
@@ -12524,7 +12524,7 @@
 
             reader.onerror = function(error) {
                 console.error('❌ Erreur lors de la lecture du fichier:', error);
-                alert('❌ Erreur lors de la lecture du fichier. Veuillez réessayer avec une autre image.');
+                alert(' Erreur lors de la lecture du fichier. Veuillez réessayer avec une autre image.');
                 event.target.value = '';
             };
 
@@ -12541,14 +12541,14 @@
                     };
                     img.onerror = function() {
                         console.error('❌ Image corrompue');
-                        alert('❌ Erreur: L\'image est corrompue ou dans un format non supporté.\n\nFormats acceptés: JPG, PNG, GIF, WebP, BMP');
+                        alert(' Erreur: L\'image est corrompue ou dans un format non supporté.\n\nFormats acceptés: JPG, PNG, GIF, WebP, BMP');
                         event.target.value = '';
                     };
                     img.src = imageData;
 
                 } catch (error) {
                     console.error('❌ Erreur lors du traitement:', error);
-                    alert('❌ Erreur lors du traitement de l\'image: ' + error.message);
+                    alert(' Erreur lors du traitement de l\'image: ' + error.message);
                     event.target.value = '';
                 }
             };
@@ -12588,13 +12588,13 @@
 
                 // Afficher les stats de stockage
                 const storage = await ImageDB.getStorageUsage();
-                alert('✅ Image mise à jour avec succès!\n\n' +
+                alert(' Image mise à jour avec succès!\n\n' +
                       imageName + '\n\n' +
                       '💾 Stockage IndexedDB: ' + storage.used + ' MB / ' + storage.total + ' MB (' + storage.percentage + '%)');
 
             } catch (error) {
                 console.error('❌ Erreur lors de la sauvegarde:', error);
-                alert('❌ Erreur lors de la sauvegarde:\n' + error.message);
+                alert(' Erreur lors de la sauvegarde:\n' + error.message);
                 addLog('error', 'Erreur sauvegarde image: ' + error.message);
             }
         }
@@ -12644,7 +12644,7 @@
 
             } catch (error) {
                 console.error('Erreur suppression:', error);
-                alert('❌ Erreur: ' + error.message);
+                alert(' Erreur: ' + error.message);
             }
         }
 
@@ -12804,7 +12804,7 @@
             // Appliquer le changement
             applySiteName(name);
             addLog('success', 'Nom du site modifié: ' + name);
-            alert('✅ Nom du site mis à jour !');
+            alert(' Nom du site mis à jour !');
         }
 
         // Appliquer le nom du site
@@ -12838,7 +12838,7 @@
             // Appliquer le dégradé
             applyGradientColors(color1, color2);
             addLog('success', 'Couleurs du dégradé modifiées');
-            alert('✅ Dégradé de fond mis à jour !');
+            alert(' Dégradé de fond mis à jour !');
         }
 
         // Appliquer les couleurs du dégradé
@@ -12860,7 +12860,7 @@
             // Appliquer les accents
             applyAccentColors(color1, color2);
             addLog('success', 'Couleurs d\'accent modifiées');
-            alert('✅ Couleurs d\'accent mises à jour !');
+            alert(' Couleurs d\'accent mises à jour !');
         }
 
         // Appliquer les couleurs d'accent
@@ -14328,7 +14328,7 @@
             localStorage.setItem('alphamouv_config', JSON.stringify(config));
 
             addLog('success', 'Modifications enregistrées pour: ' + currentEditingPage.name);
-            alert('✅ Modifications enregistrées !\n\nNote: Pour que les changements soient visibles sur la page réelle, il faut actualiser la page.');
+            alert(' Modifications enregistrées !\n\nNote: Pour que les changements soient visibles sur la page réelle, il faut actualiser la page.');
 
             closeVisualPageEditor();
         }
@@ -14410,7 +14410,7 @@
             loadPagesManager();
             closeEditorModal();
             addLog('success', 'Page créée: ' + name);
-            alert('✅ Page créée ! Note: Le fichier HTML doit être créé manuellement.');
+            alert(' Page créée ! Note: Le fichier HTML doit être créé manuellement.');
         }
 
         // Export/Import configuration
@@ -14450,10 +14450,10 @@
                     }
                     
                     addLog('success', 'Configuration importée');
-                    alert('✅ Configuration importée avec succès ! La page va se recharger.');
+                    alert(' Configuration importée avec succès ! La page va se recharger.');
                     location.reload();
                 } catch (err) {
-                    alert('❌ Erreur lors de l\'import: fichier invalide');
+                    alert(' Erreur lors de l\'import: fichier invalide');
                 }
             };
             reader.readAsText(file);
@@ -14511,7 +14511,7 @@
             document.getElementById('confirmAdminPassword').value = '';
             
             addLog('warning', 'Mot de passe admin modifié');
-            alert('✅ Mot de passe admin modifié avec succès !');
+            alert(' Mot de passe admin modifié avec succès !');
         }
 
         // Ajouter un admin
@@ -14531,7 +14531,7 @@
                 document.getElementById('newAdminEmail').value = '';
                 loadAdminSettings();
                 addLog('success', 'Nouvel admin ajouté: ' + email);
-                alert('✅ ' + email + ' a été ajouté comme administrateur');
+                alert(' ' + email + ' a été ajouté comme administrateur');
             } else {
                 alert('Cet email est déjà administrateur');
             }
@@ -14614,7 +14614,7 @@
                 localStorage.setItem('alphamouv_banned_users', JSON.stringify(bannedUsers));
 
                 addLog('warning', 'Utilisateur banni: ' + email);
-                alert('✅ L\'utilisateur ' + email + ' a été banni.');
+                alert(' L\'utilisateur ' + email + ' a été banni.');
 
                 // Recharger la liste
                 loadModerationUsers('all');
@@ -14634,7 +14634,7 @@
             localStorage.setItem('alphamouv_banned_users', JSON.stringify(bannedUsers));
 
             addLog('success', 'Utilisateur débanni: ' + email);
-            alert('✅ L\'utilisateur ' + email + ' a été débanni.');
+            alert(' L\'utilisateur ' + email + ' a été débanni.');
 
             // Recharger la liste
             loadModerationUsers('all');
@@ -15131,7 +15131,7 @@
             
             closeEditorModal();
             addLog('success', 'Cadre modifié: ' + config.cardsData[currentPopupCardId].title);
-            alert('✅ Cadre mis à jour avec succès !');
+            alert(' Cadre mis à jour avec succès !');
         }
 
         // Charger les images du carrousel depuis IndexedDB au démarrage
@@ -15812,13 +15812,13 @@
             const caption = document.getElementById('instagramCaption').value.trim();
 
             if (!url) {
-                alert('⚠️ Veuillez entrer l\'URL du post Instagram');
+                alert(' Veuillez entrer l\'URL du post Instagram');
                 return;
             }
 
             // Vérifier que c'est une URL Instagram valide
             if (!url.includes('instagram.com')) {
-                alert('⚠️ L\'URL doit être un lien Instagram valide');
+                alert(' L\'URL doit être un lien Instagram valide');
                 return;
             }
 
@@ -15839,7 +15839,7 @@
             } else {
                 // Ajouter un nouveau post
                 if (!tempImageData) {
-                    alert('⚠️ Veuillez sélectionner une image de prévisualisation');
+                    alert(' Veuillez sélectionner une image de prévisualisation');
                     return;
                 }
 

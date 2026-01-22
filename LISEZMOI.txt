@@ -1,0 +1,130 @@
+============================================================
+           ALPHAMOUV - GUIDE D'INSTALLATION
+============================================================
+
+PREREQUIS
+---------
+1. Node.js (version 18 ou superieure)
+   Telecharger sur : https://nodejs.org/
+
+2. Un terminal (PowerShell, CMD, ou Git Bash)
+
+
+INSTALLATION
+------------
+1. Ouvrez un terminal dans le dossier du projet
+
+2. Installez les dependances :
+   npm install
+
+3. Lancez le serveur :
+   npm start
+
+4. Ouvrez votre navigateur a l'adresse :
+   http://localhost:3000
+
+
+COMPTE ADMIN PAR DEFAUT
+-----------------------
+Email : bab.empirevision@gmail.com
+Mot de passe : admin123
+
+(Vous pouvez changer ces informations dans le fichier .env)
+
+
+STRUCTURE DU PROJET
+-------------------
+/Projectweb
+  |-- server.js          -> Serveur Node.js (backend)
+  |-- api.js             -> Client API pour le frontend
+  |-- package.json       -> Dependances npm
+  |-- .env               -> Configuration (a personnaliser)
+  |-- alphamouv.db       -> Base de donnees SQLite (creee automatiquement)
+  |
+  |-- index.html         -> Page d'accueil
+  |-- blog.html          -> Portfolio / Galerie
+  |-- boutique.html      -> Boutique en ligne
+  |-- 404.html           -> Page d'erreur
+  |-- mentions-legales.html
+  |-- politique-confidentialite.html
+  |-- cgv.html
+  |
+  |-- /images            -> Images du site
+  |-- /uploads           -> Images uploadees (cree automatiquement)
+  |-- /backup            -> Sauvegardes
+
+
+FONCTIONNALITES BACKEND
+-----------------------
+- Authentification (inscription, connexion, JWT)
+- Gestion des produits (CRUD)
+- Gestion des commandes
+- Newsletter
+- Evenements
+- Galerie
+- Upload d'images
+- Statistiques admin
+
+
+API ENDPOINTS
+-------------
+POST   /api/auth/register    -> Inscription
+POST   /api/auth/login       -> Connexion
+GET    /api/auth/profile     -> Profil utilisateur
+PUT    /api/auth/profile     -> Mise a jour profil
+PUT    /api/auth/password    -> Changement mot de passe
+
+GET    /api/products         -> Liste produits
+GET    /api/products/:id     -> Detail produit
+POST   /api/products         -> Creer produit (admin)
+PUT    /api/products/:id     -> Modifier produit (admin)
+DELETE /api/products/:id     -> Supprimer produit (admin)
+
+POST   /api/orders           -> Creer commande
+GET    /api/orders           -> Mes commandes
+GET    /api/admin/orders     -> Toutes les commandes (admin)
+PUT    /api/admin/orders/:id -> Modifier statut (admin)
+
+POST   /api/newsletter       -> S'inscrire newsletter
+GET    /api/admin/newsletter -> Liste abonnes (admin)
+
+GET    /api/events           -> Liste evenements
+POST   /api/events           -> Creer evenement (admin)
+PUT    /api/events/:id       -> Modifier evenement (admin)
+DELETE /api/events/:id       -> Supprimer evenement (admin)
+
+GET    /api/gallery          -> Liste galerie
+POST   /api/gallery          -> Ajouter image (admin)
+DELETE /api/gallery/:id      -> Supprimer image (admin)
+
+POST   /api/upload           -> Upload image
+POST   /api/contact          -> Envoyer message contact
+GET    /api/admin/stats      -> Statistiques (admin)
+
+
+CONFIGURATION EMAIL (.env)
+--------------------------
+Pour activer l'envoi d'emails (newsletter, confirmations) :
+
+1. Allez sur votre compte Gmail
+2. Activez la verification en 2 etapes
+3. Generez un "mot de passe d'application"
+4. Modifiez le fichier .env :
+   EMAIL_USER=votre_email@gmail.com
+   EMAIL_PASS=votre_mot_de_passe_application
+
+
+MISE EN PRODUCTION
+------------------
+Pour mettre le site en ligne, vous aurez besoin de :
+1. Un hebergeur Node.js (Heroku, Railway, Render, VPS...)
+2. Un nom de domaine
+3. Un certificat SSL (HTTPS)
+4. Eventuellement un service de paiement (Stripe)
+
+Contact : bab.empirevision@gmail.com
+
+
+============================================================
+                    Bon developpement !
+============================================================

@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="B.A.B - Artiste Créateur | Portfolio et Boutique de créations uniques">
+    <title>B.A.B - Artiste Créateur</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+            background: #0d1a2d;
+        }
+
+        /* Conteneur des deux cotes */
+        .split-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Cote gauche - Portfolio */
+        .side-left {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50%;
+            height: 100%;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            text-decoration: none;
+            display: block;
+        }
+
+        /* Cote droit - Boutique */
+        .side-right {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 50%;
+            height: 100%;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            text-decoration: none;
+            display: block;
+        }
+
+        .side-left:hover {
+            width: 53%;
+        }
+
+        .side-right:hover {
+            width: 53%;
+        }
+
+        .side-left:hover ~ .side-right,
+        .split-container:has(.side-right:hover) .side-left {
+            width: 47%;
+        }
+
+        /* Fond par defaut avec image statique */
+        .side-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transition: opacity 0.5s ease;
+            background-color: #0d1a2d;
+        }
+
+        .side-bg-image {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            opacity: 0.4;
+        }
+
+        .side-left .side-bg-image {
+            background-image: url('images/preview-portfolio.png');
+            background-position: 30% center;
+        }
+
+        .side-right .side-bg-image {
+            background-image: url('images/preview-boutique.png');
+            background-position: 70% center;
+        }
+
+        .side-bg-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 26, 45, 0.6);
+        }
+
+        /* Preview iframe */
+        .preview-container {
+            position: fixed;
+            top: 0;
+            width: 50%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .preview-left {
+            left: 0;
+        }
+
+        .preview-right {
+            right: 0;
+        }
+
+        .preview-iframe {
+            position: absolute;
+            top: 0;
+            width: 100vw;
+            height: 100%;
+            border: none;
+            pointer-events: none;
+        }
+
+        .preview-left .preview-iframe {
+            left: 0;
+        }
+
+        .preview-right .preview-iframe {
+            right: 0;
+            left: auto;
+        }
+
+        /* Overlay flou sur preview */
+        .preview-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 26, 45, 0.7);
+        }
+
+        /* Labels */
+        .side-label {
+            position: fixed;
+            z-index: 50;
+            top: 50%;
+            transition: all 0.4s ease;
+            pointer-events: none;
+        }
+
+        .side-left .side-label {
+            left: 25%;
+            transform: translate(-50%, -50%);
+        }
+
+        .side-right .side-label {
+            left: 75%;
+            transform: translate(-50%, -50%);
+        }
+
+        .side-label h2 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.8em;
+            font-weight: 300;
+            color: rgba(255, 255, 255, 0.7);
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            transition: all 0.4s ease;
+        }
+
+        .side-left:hover .side-label h2,
+        .side-right:hover .side-label h2 {
+            color: #ddac0b;
+            text-shadow: 0 0 30px rgba(221, 172, 11, 0.6);
+        }
+
+        /* Mur diagonal - partie haute */
+        .diagonal-wall-top {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            width: 3px;
+            height: calc(50% - 120px);
+            background: linear-gradient(180deg,
+                rgba(221, 172, 11, 0.2) 0%,
+                rgba(221, 172, 11, 0.9) 100%
+            );
+            transform: translateX(-50%);
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        /* Mur diagonal - partie basse */
+        .diagonal-wall-bottom {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            width: 3px;
+            height: calc(50% - 100px);
+            background: linear-gradient(180deg,
+                rgba(221, 172, 11, 0.9) 0%,
+                rgba(221, 172, 11, 0.2) 100%
+            );
+            transform: translateX(-50%);
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        /* Logo B.A.B au centre */
+        .logo-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 200;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .logo-frame {
+            position: relative;
+            padding: 25px 55px 20px 55px;
+            background: linear-gradient(135deg, rgba(13, 26, 45, 0.98), rgba(18, 30, 50, 0.98));
+            border-radius: 12px;
+            display: inline-block;
+            border: 2px solid #ddac0b;
+            box-shadow: 0 0 40px rgba(221, 172, 11, 0.4),
+                        0 0 80px rgba(221, 172, 11, 0.2);
+        }
+
+        .logo {
+            font-family: 'Cinzel', serif;
+            font-size: 4em;
+            font-weight: 700;
+            color: #ddac0b;
+            text-shadow: 0 0 20px rgba(221, 172, 11, 0.5);
+            letter-spacing: 12px;
+            margin-right: -12px;
+            display: block;
+        }
+
+        .subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.85em;
+            font-weight: 300;
+            color: rgba(255, 255, 255, 0.6);
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            margin-top: 8px;
+        }
+
+        /* Footer */
+        footer {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 200;
+        }
+
+        footer a {
+            color: rgba(221, 172, 11, 0.5);
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 0.7em;
+            letter-spacing: 1px;
+            transition: color 0.3s ease;
+        }
+
+        footer a:hover {
+            color: #ddac0b;
+        }
+
+        /* Particules */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 95;
+        }
+
+        .particle {
+            position: absolute;
+            background: radial-gradient(circle, rgba(221, 172, 11, 0.6) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: floatParticle 20s infinite ease-in-out;
+        }
+
+        @keyframes floatParticle {
+            0%, 100% { transform: translateY(0) translateX(0); opacity: 0.2; }
+            25% { transform: translateY(-40px) translateX(15px); opacity: 0.5; }
+            50% { transform: translateY(-80px) translateX(-10px); opacity: 0.3; }
+            75% { transform: translateY(-40px) translateX(-15px); opacity: 0.5; }
+        }
+
+        /* Animation portail au clic */
+        .portal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #0d1a2d;
+            background-size: cover;
+            background-position: center;
+            z-index: 10000;
+            pointer-events: none;
+            clip-path: circle(0% at 50% 50%);
+        }
+
+        .portal-overlay.to-blog {
+            background-image: url('images/Capture%20d%27écran%202026-01-22%20010830.png');
+        }
+
+        .portal-overlay.to-boutique {
+            background-image: url('images/Capture%20d%27écran%202026-01-22%20010843.png');
+        }
+
+        .portal-overlay.animate {
+            animation: circleOpen 0.6s ease-out forwards;
+        }
+
+        @keyframes circleOpen {
+            0% {
+                clip-path: circle(0% at var(--click-x) var(--click-y));
+            }
+            100% {
+                clip-path: circle(150% at var(--click-x) var(--click-y));
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 2.8em;
+                letter-spacing: 8px;
+            }
+            .logo-frame {
+                padding: 20px 35px 15px 35px;
+            }
+            .subtitle {
+                font-size: 0.7em;
+                letter-spacing: 4px;
+            }
+            /* Labels Portfolio / Boutique */
+            .side-label h2 {
+                font-size: 1.1em;
+                letter-spacing: 4px;
+            }
+            .diagonal-wall-top {
+                height: calc(50% - 90px);
+            }
+            .diagonal-wall-bottom {
+                height: calc(50% - 80px);
+            }
+            /* Footer liens légaux */
+            footer {
+                bottom: 15px;
+                width: 100%;
+                padding: 0 10px;
+            }
+            footer a {
+                font-size: 0.55em;
+                margin: 0 8px;
+                letter-spacing: 0.5px;
+            }
+        }
+
+        /* Très petit écran */
+        @media (max-width: 480px) {
+            .logo {
+                font-size: 2.2em;
+                letter-spacing: 6px;
+            }
+            .logo-frame {
+                padding: 15px 25px 12px 25px;
+            }
+            .subtitle {
+                font-size: 0.6em;
+                letter-spacing: 3px;
+            }
+            /* Labels Portfolio / Boutique - encore plus petit */
+            .side-label h2 {
+                font-size: 0.9em;
+                letter-spacing: 3px;
+            }
+            /* Footer liens légaux - compact */
+            footer {
+                bottom: 10px;
+            }
+            footer a {
+                font-size: 0.5em;
+                margin: 0 5px;
+                letter-spacing: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Particules -->
+    <div class="particles" id="particles"></div>
+
+    <!-- Previews (en arriere-plan) -->
+    <div class="preview-container preview-left" id="preview-left">
+        <iframe src="blog.html" class="preview-iframe" loading="lazy"></iframe>
+        <div class="preview-overlay"></div>
+    </div>
+    <div class="preview-container preview-right" id="preview-right">
+        <iframe src="boutique.html" class="preview-iframe" loading="lazy"></iframe>
+        <div class="preview-overlay"></div>
+    </div>
+
+    <!-- Conteneur split -->
+    <div class="split-container">
+        <!-- Cote Portfolio -->
+        <a href="blog.html" class="side-left" id="side-left">
+            <div class="side-bg">
+                <div class="side-bg-image"></div>
+                <div class="side-bg-overlay"></div>
+            </div>
+            <div class="side-label">
+                <h2>Portfolio</h2>
+            </div>
+        </a>
+
+        <!-- Cote Boutique -->
+        <a href="boutique.html" class="side-right" id="side-right">
+            <div class="side-bg">
+                <div class="side-bg-image"></div>
+                <div class="side-bg-overlay"></div>
+            </div>
+            <div class="side-label">
+                <h2>Boutique</h2>
+            </div>
+        </a>
+    </div>
+
+    <!-- Mur de separation (en deux parties qui evitent le logo) -->
+    <div class="diagonal-wall-top"></div>
+    <div class="diagonal-wall-bottom"></div>
+
+    <!-- Logo B.A.B au centre -->
+    <div class="logo-container">
+        <div class="logo-frame">
+            <h1 class="logo">B.A.B</h1>
+            <p class="subtitle">Artiste Createur</p>
+        </div>
+    </div>
+
+    <!-- Overlay pour l'animation portail -->
+    <div id="portal-overlay" class="portal-overlay"></div>
+
+
+    <!-- Footer -->
+    <footer>
+        <a href="mentions-legales.html">Mentions legales</a>
+        <a href="politique-confidentialite.html">Confidentialite</a>
+        <a href="cgv.html">CGV</a>
+    </footer>
+
+    <script>
+        // Generation des particules
+        const particlesContainer = document.getElementById('particles');
+        const particleCount = 25;
+
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+
+            const size = Math.random() * 4 + 2;
+            particle.style.width = size + 'px';
+            particle.style.height = size + 'px';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.top = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 20 + 's';
+            particle.style.animationDuration = (Math.random() * 15 + 15) + 's';
+
+            particlesContainer.appendChild(particle);
+        }
+
+        // Gestion des previews au survol
+        const sideLeft = document.getElementById('side-left');
+        const sideRight = document.getElementById('side-right');
+        const previewLeft = document.getElementById('preview-left');
+        const previewRight = document.getElementById('preview-right');
+
+        sideLeft.addEventListener('mouseenter', () => {
+            previewLeft.style.opacity = '1';
+            sideLeft.querySelector('.side-bg').style.opacity = '0';
+        });
+        sideLeft.addEventListener('mouseleave', () => {
+            previewLeft.style.opacity = '0';
+            sideLeft.querySelector('.side-bg').style.opacity = '1';
+        });
+
+        sideRight.addEventListener('mouseenter', () => {
+            previewRight.style.opacity = '1';
+            sideRight.querySelector('.side-bg').style.opacity = '0';
+        });
+        sideRight.addEventListener('mouseleave', () => {
+            previewRight.style.opacity = '0';
+            sideRight.querySelector('.side-bg').style.opacity = '1';
+        });
+
+        // Animation portail au clic
+        const portalOverlay = document.getElementById('portal-overlay');
+
+        // Fonction pour reinitialiser l'overlay
+        function resetPortal() {
+            portalOverlay.classList.remove('animate');
+            portalOverlay.classList.remove('to-blog');
+            portalOverlay.classList.remove('to-boutique');
+            portalOverlay.style.removeProperty('--click-x');
+            portalOverlay.style.removeProperty('--click-y');
+        }
+
+        // Reinitialiser au chargement initial
+        resetPortal();
+
+        // Reinitialiser lors du retour arriere (bfcache)
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                resetPortal();
+            }
+        });
+
+        function triggerPortal(e, targetUrl, targetClass) {
+            e.preventDefault();
+
+            // Position du clic en pourcentage
+            const x = (e.clientX / window.innerWidth) * 100;
+            const y = (e.clientY / window.innerHeight) * 100;
+
+            // Preparer les variables CSS
+            portalOverlay.style.setProperty('--click-x', x + '%');
+            portalOverlay.style.setProperty('--click-y', y + '%');
+
+            // Ajouter la classe de destination pour le fond
+            portalOverlay.classList.add(targetClass);
+
+            // Lancer l'animation
+            portalOverlay.classList.add('animate');
+
+            // Rediriger apres l'animation
+            setTimeout(() => {
+                window.location.href = targetUrl;
+            }, 550);
+        }
+
+        sideLeft.addEventListener('click', (e) => triggerPortal(e, 'blog.html', 'to-blog'));
+        sideRight.addEventListener('click', (e) => triggerPortal(e, 'boutique.html', 'to-boutique'));
+    </script>
+</body>
+</html>

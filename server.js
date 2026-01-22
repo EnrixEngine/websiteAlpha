@@ -262,16 +262,27 @@ app.get('/', (req, res) => {
 // Debug endpoint - a supprimer en production
 app.get('/api/debug/admin', (req, res) => {
     try {
-        const admin = dbGet("SELECT id, email, role FROM users WHERE role = 'admin'");
+        const admin = dbGet("SELECT id, email, password, role FROM users WHERE role = 'admin'");
         const envEmail = process.env.ADMIN_EMAIL || 'non defini';
+        const envPassword = process.env.ADMIN_PASSWORD || 'non defini';
+
+        // Test si le mot de passe env correspond au hash en base
+        let passwordMatch = false;
+        if (admin && envPassword !== 'non defini') {
+            passwordMatch = bcrypt.compareSync(envPassword, admin.password);
+        }
+
         res.json({
             adminExists: !!admin,
             adminEmail: admin ? admin.email : null,
             envEmailConfigured: envEmail !== 'non defini',
-            envEmail: envEmail
+            envEmail: envEmail,
+            envPasswordConfigured: envPassword !== 'non defini',
+            envPasswordLength: envPassword.length,
+            passwordMatchesHash: passwordMatch
         });
     } catch (error) {
-        res.status(500).json({ error: 'Erreur' });
+        res.status(500).json({ error: 'Erreur: ' + error.message });
     }
 });
 

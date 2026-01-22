@@ -259,6 +259,22 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Debug endpoint - a supprimer en production
+app.get('/api/debug/admin', (req, res) => {
+    try {
+        const admin = dbGet("SELECT id, email, role FROM users WHERE role = 'admin'");
+        const envEmail = process.env.ADMIN_EMAIL || 'non defini';
+        res.json({
+            adminExists: !!admin,
+            adminEmail: admin ? admin.email : null,
+            envEmailConfigured: envEmail !== 'non defini',
+            envEmail: envEmail
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur' });
+    }
+});
+
 // ==================== API AUTHENTIFICATION ====================
 
 app.post('/api/auth/register', async (req, res) => {

@@ -4527,37 +4527,132 @@
             }
         });
 
-        // Commander
+        // Commander - Redirection vers Stripe Checkout
         async function checkout() {
             if (cart.length === 0) {
                 await customAlert('Votre panier est vide !', 'Panier vide', 'warning');
                 return;
             }
 
-            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            const itemsList = cart.map(item => `• ${item.name} (x${item.quantity})`).join('<br>');
+            // Verifier si l'utilisateur est connecte
+            const token = localStorage.getItem('alphamouv_token');
+            if (!token) {
+                await customAlert('Vous devez etre connecte pour commander.', 'Connexion requise', 'warning');
+                // Ouvrir le modal de connexion
+                const loginModal = document.getElementById('authModal');
+                if (loginModal) loginModal.style.display = 'flex';
+                return;
+            }
 
-            await customAlert(
-                `<strong>Articles:</strong><br><br>${itemsList}<br><br><strong>Total: ${total}€</strong><br><br>Merci pour votre commande ! Vous allez recevoir un email de confirmation.`,
-                '🎉 Commande confirmée !',
-                'success'
-            );
+            try {
+                // Afficher un loader
+                const checkoutBtn = document.querySelector('.checkout-btn');
+                const originalText = checkoutBtn.textContent;
+                checkoutBtn.textContent = 'Chargement...';
+                checkoutBtn.disabled = true;
 
-            // Enregistrer les achats pour permettre les commentaires
-            const purchases = JSON.parse(localStorage.getItem('alphamouv_purchases')) || [];
-            cart.forEach(item => {
-                if (!purchases.includes(item.id)) {
-                    purchases.push(item.id);
+                // Preparer les items pour Stripe
+                const items = cart.map(item => ({
+                    name: item.name,
+                    description: item.description || '',
+                    price: item.price,
+                    quantity: item.quantity,
+                    image: item.image
+                }));
+
+                // Creer la session de paiement
+                const response = await fetch('/api/payment/create-checkout-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({
+                        items: items,
+                        successUrl: window.location.origin + '/boutique.html?payment=success',
+                        cancelUrl: window.location.origin + '/boutique.html?payment=cancel'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
                 }
-            });
-            localStorage.setItem('alphamouv_purchases', JSON.stringify(purchases));
 
-            // Vider le panier
-            cart = [];
-            saveCart();
-            updateCartUI();
-            toggleCart();
+                // Sauvegarder le panier avant redirection (pour le restaurer si annulation)
+                localStorage.setItem('alphamouv_cart_backup', JSON.stringify(cart));
+
+                // Rediriger vers Stripe Checkout
+                window.location.href = data.url;
+
+            } catch (error) {
+                console.error('Erreur paiement:', error);
+                await customAlert('Erreur lors de la creation du paiement: ' + error.message, 'Erreur', 'error');
+
+                // Restaurer le bouton
+                const checkoutBtn = document.querySelector('.checkout-btn');
+                checkoutBtn.textContent = 'Commander';
+                checkoutBtn.disabled = false;
+            }
         }
+
+        // Gerer le retour de paiement Stripe
+        function handlePaymentReturn() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const paymentStatus = urlParams.get('payment');
+
+            if (paymentStatus === 'success') {
+                // Paiement reussi
+                customAlert(
+                    'Votre commande a ete confirmee ! Vous recevrez un email de confirmation.',
+                    'Paiement reussi !',
+                    'success'
+                );
+
+                // Enregistrer les achats pour permettre les commentaires
+                const cartBackup = JSON.parse(localStorage.getItem('alphamouv_cart_backup')) || [];
+                const purchases = JSON.parse(localStorage.getItem('alphamouv_purchases')) || [];
+                cartBackup.forEach(item => {
+                    if (!purchases.includes(item.id)) {
+                        purchases.push(item.id);
+                    }
+                });
+                localStorage.setItem('alphamouv_purchases', JSON.stringify(purchases));
+
+                // Vider le panier
+                cart = [];
+                saveCart();
+                updateCartUI();
+                localStorage.removeItem('alphamouv_cart_backup');
+
+                // Nettoyer l'URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+
+            } else if (paymentStatus === 'cancel') {
+                // Paiement annule
+                customAlert(
+                    'Le paiement a ete annule. Votre panier a ete conserve.',
+                    'Paiement annule',
+                    'warning'
+                );
+
+                // Restaurer le panier si necessaire
+                const cartBackup = JSON.parse(localStorage.getItem('alphamouv_cart_backup'));
+                if (cartBackup && cart.length === 0) {
+                    cart = cartBackup;
+                    saveCart();
+                    updateCartUI();
+                }
+                localStorage.removeItem('alphamouv_cart_backup');
+
+                // Nettoyer l'URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+
+        // Appeler au chargement de la page
+        document.addEventListener('DOMContentLoaded', handlePaymentReturn);
 
         // Initialiser au chargement
         window.addEventListener('DOMContentLoaded', initProducts);

@@ -49,6 +49,10 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+// Configuration Stripe
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const STRIPE_PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY;
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'alphamouv_secret_2024';
@@ -62,10 +66,10 @@ app.use(helmet({
             defaultSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://accounts.google.com", "https://www.instagram.com"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://accounts.google.com", "https://www.instagram.com", "https://js.stripe.com", "https://www.paypal.com"],
             imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
-            connectSrc: ["'self'", "https://accounts.google.com", "https://www.instagram.com", "https://res.cloudinary.com"],
-            frameSrc: ["'self'", "https://accounts.google.com", "https://www.instagram.com"],
+            connectSrc: ["'self'", "https://accounts.google.com", "https://www.instagram.com", "https://res.cloudinary.com", "https://api.stripe.com", "https://www.paypal.com"],
+            frameSrc: ["'self'", "https://accounts.google.com", "https://www.instagram.com", "https://js.stripe.com", "https://hooks.stripe.com", "https://www.paypal.com"],
         },
     },
     crossOriginEmbedderPolicy: false,
@@ -223,6 +227,21 @@ async function initDatabase() {
             image TEXT NOT NULL,
             ordre INTEGER DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            stripe_session_id TEXT,
+            total REAL NOT NULL,
+            status TEXT DEFAULT 'pending',
+            items TEXT,
+            shipping_address TEXT,
+            paid_at TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
     `);
 
@@ -787,6 +806,130 @@ app.delete('/api/carousel/:id', authenticateToken, isAdmin, (req, res) => {
     try {
         dbRun('DELETE FROM carousel WHERE id = ?', [req.params.id]);
         res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// ==================== API PAIEMENT (Stripe) ====================
+
+// Recuperer la cle publique Stripe
+app.get('/api/payment/config', (req, res) => {
+    res.json({
+        publishableKey: STRIPE_PUBLISHABLE_KEY,
+        testMode: !STRIPE_PUBLISHABLE_KEY || STRIPE_PUBLISHABLE_KEY.includes('test')
+    });
+});
+
+// Creer une session de paiement Stripe Checkout
+app.post('/api/payment/create-checkout-session', authenticateToken, async (req, res) => {
+    try {
+        const { items, successUrl, cancelUrl } = req.body;
+
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ error: 'Panier vide' });
+        }
+
+        // Construire les line items pour Stripe
+        const lineItems = items.map(item => ({
+            price_data: {
+                currency: 'eur',
+                product_data: {
+                    name: item.name,
+                    description: item.description || undefined,
+                    images: item.image ? [item.image] : undefined,
+                },
+                unit_amount: Math.round(item.price * 100), // Stripe utilise les centimes
+            },
+            quantity: item.quantity || 1,
+        }));
+
+        // Creer la session Stripe Checkout
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: lineItems,
+            mode: 'payment',
+            success_url: successUrl || `${req.headers.origin}/boutique.html?payment=success`,
+            cancel_url: cancelUrl || `${req.headers.origin}/boutique.html?payment=cancel`,
+            customer_email: req.user.email,
+            metadata: {
+                user_id: req.user.id.toString(),
+            },
+            shipping_address_collection: {
+                allowed_countries: ['FR', 'BE', 'CH', 'LU', 'MC'],
+            },
+            billing_address_collection: 'required',
+        });
+
+        // Enregistrer la commande en base
+        const orderResult = dbRun(`
+            INSERT INTO orders (user_id, stripe_session_id, total, status, items)
+            VALUES (?, ?, ?, ?, ?)
+        `, [
+            req.user.id,
+            session.id,
+            items.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0),
+            'pending',
+            JSON.stringify(items)
+        ]);
+
+        res.json({
+            sessionId: session.id,
+            url: session.url,
+            orderId: orderResult.lastID
+        });
+    } catch (error) {
+        console.error('Erreur creation session Stripe:', error);
+        res.status(500).json({ error: 'Erreur lors de la creation du paiement' });
+    }
+});
+
+// Verifier le statut d'un paiement
+app.get('/api/payment/status/:sessionId', authenticateToken, async (req, res) => {
+    try {
+        const session = await stripe.checkout.sessions.retrieve(req.params.sessionId);
+
+        // Mettre a jour le statut de la commande si paye
+        if (session.payment_status === 'paid') {
+            dbRun(`
+                UPDATE orders SET status = 'paid', paid_at = CURRENT_TIMESTAMP
+                WHERE stripe_session_id = ?
+            `, [session.id]);
+        }
+
+        res.json({
+            status: session.payment_status,
+            customerEmail: session.customer_details?.email,
+            amountTotal: session.amount_total / 100,
+        });
+    } catch (error) {
+        console.error('Erreur verification paiement:', error);
+        res.status(500).json({ error: 'Erreur verification paiement' });
+    }
+});
+
+// Historique des commandes utilisateur
+app.get('/api/orders', authenticateToken, (req, res) => {
+    try {
+        const orders = dbAll(`
+            SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC
+        `, [req.user.id]);
+        res.json(orders);
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// Admin: Toutes les commandes
+app.get('/api/admin/orders', authenticateToken, isAdmin, (req, res) => {
+    try {
+        const orders = dbAll(`
+            SELECT o.*, u.email, u.nom, u.prenom
+            FROM orders o
+            LEFT JOIN users u ON o.user_id = u.id
+            ORDER BY o.created_at DESC
+        `);
+        res.json(orders);
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
     }

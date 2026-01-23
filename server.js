@@ -13,6 +13,35 @@ const multer = require('multer');
 const fs = require('fs');
 const cloudinary = require('cloudinary').v2;
 
+// ==================== SECURITE ====================
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
+// Rate limiters pour differentes routes
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // 100 requetes par IP
+    message: { error: 'Trop de requetes, reessayez dans 15 minutes' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // 5 tentatives de login par IP
+    message: { error: 'Trop de tentatives de connexion, reessayez dans 15 minutes' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 30, // 30 requetes API par minute
+    message: { error: 'Trop de requetes API, reessayez dans 1 minute' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 // Configuration Cloudinary
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -26,15 +55,34 @@ const JWT_SECRET = process.env.JWT_SECRET || 'alphamouv_secret_2024';
 
 // ==================== CONFIGURATION ====================
 
-// Middleware
+// Middleware de securite
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://accounts.google.com", "https://www.instagram.com"],
+            imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
+            connectSrc: ["'self'", "https://accounts.google.com", "https://www.instagram.com", "https://res.cloudinary.com"],
+            frameSrc: ["'self'", "https://accounts.google.com", "https://www.instagram.com"],
+        },
+    },
+    crossOriginEmbedderPolicy: false,
+}));
+
+// Rate limiting global
+app.use(generalLimiter);
+
+// Middleware CORS
 const corsOptions = {
     origin: process.env.FRONTEND_URL || '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 };
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '10mb' })); // Reduit de 50mb a 10mb pour securite
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Servir les fichiers statiques
 app.use(express.static(path.join(__dirname)));
@@ -270,81 +318,10 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Force reset admin password - a supprimer en production
-app.get('/api/debug/reset-admin', (req, res) => {
-    try {
-        const adminEmail = process.env.ADMIN_EMAIL || 'admin@alphamouv.com';
-        const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-        const hashedPassword = bcrypt.hashSync(adminPassword, 10);
-
-        // Supprimer tous les admins existants et en recreer un
-        db.run("DELETE FROM users WHERE role = 'admin'");
-        db.run(`
-            INSERT INTO users (email, password, nom, prenom, role)
-            VALUES (?, ?, ?, ?, ?)
-        `, [adminEmail, hashedPassword, 'Admin', 'AlphaMouv', 'admin']);
-        saveDatabase();
-
-        // Verifier que ca a marche
-        const admin = dbGet("SELECT id, email FROM users WHERE role = 'admin'");
-        const testMatch = bcrypt.compareSync(adminPassword, dbGet("SELECT password FROM users WHERE email = ?", [adminEmail])?.password || '');
-
-        res.json({
-            success: true,
-            message: 'Admin reinitialise',
-            adminEmail: admin?.email,
-            passwordTestOK: testMatch
-        });
-    } catch (error) {
-        res.status(500).json({ error: 'Erreur: ' + error.message });
-    }
-});
-
-// Debug endpoint - a supprimer en production
-app.get('/api/debug/admin', (req, res) => {
-    try {
-        const admin = dbGet("SELECT id, email, password, role FROM users WHERE role = 'admin'");
-        const envEmail = process.env.ADMIN_EMAIL || 'non defini';
-        const envPassword = process.env.ADMIN_PASSWORD || 'non defini';
-
-        // Test si le mot de passe env correspond au hash en base
-        let passwordMatch = false;
-        if (admin && envPassword !== 'non defini') {
-            passwordMatch = bcrypt.compareSync(envPassword, admin.password);
-        }
-
-        // Test direct de login
-        let loginTest = 'non teste';
-        if (admin) {
-            const userByEmail = dbGet('SELECT * FROM users WHERE email = ?', [envEmail]);
-            if (!userByEmail) {
-                loginTest = 'Email non trouve en base';
-            } else {
-                const validPwd = bcrypt.compareSync(envPassword, userByEmail.password);
-                loginTest = validPwd ? 'Login OK' : 'Mot de passe incorrect';
-            }
-        }
-
-        res.json({
-            adminExists: !!admin,
-            adminEmail: admin ? admin.email : null,
-            adminPasswordHashStart: admin ? admin.password.substring(0, 10) + '...' : null,
-            envEmailConfigured: envEmail !== 'non defini',
-            envEmail: envEmail,
-            envPasswordConfigured: envPassword !== 'non defini',
-            envPasswordLength: envPassword.length,
-            passwordMatchesHash: passwordMatch,
-            loginTestResult: loginTest
-        });
-    } catch (error) {
-        res.status(500).json({ error: 'Erreur: ' + error.message });
-    }
-});
-
 // ==================== API AUTHENTIFICATION ====================
 
 // Connexion avec Google
-app.post('/api/auth/google', async (req, res) => {
+app.post('/api/auth/google', authLimiter, async (req, res) => {
     try {
         const { credential, clientId } = req.body;
 
@@ -415,7 +392,7 @@ app.post('/api/auth/google', async (req, res) => {
     }
 });
 
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
     try {
         const { email, password, nom, prenom, adresse, code_postal, ville, telephone } = req.body;
 
@@ -449,7 +426,7 @@ app.post('/api/auth/register', async (req, res) => {
     }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
 

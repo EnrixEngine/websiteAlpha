@@ -59,6 +59,109 @@ if (process.env.STRIPE_SECRET_KEY) {
     console.log('Stripe non configure - ajoutez STRIPE_SECRET_KEY pour activer les paiements');
 }
 
+// Configuration Resend (emails)
+let resend = null;
+if (process.env.RESEND_API_KEY) {
+    const { Resend } = require('resend');
+    resend = new Resend(process.env.RESEND_API_KEY);
+    console.log('Resend configure pour les emails');
+} else {
+    console.log('Resend non configure - ajoutez RESEND_API_KEY pour activer les emails');
+}
+
+// Fonction d'envoi d'email de confirmation de commande
+async function sendOrderConfirmationEmail(order, customerEmail, customerName) {
+    if (!resend) {
+        console.log('Email non envoye - Resend non configure');
+        return false;
+    }
+
+    try {
+        const items = JSON.parse(order.items || '[]');
+        const itemsList = items.map(item =>
+            `<tr>
+                <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity || 1}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.price.toFixed(2)} €</td>
+            </tr>`
+        ).join('');
+
+        const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #ddac0b, #b8900a); padding: 30px; text-align: center; }
+                .header h1 { color: #000; margin: 0; font-size: 28px; }
+                .content { padding: 30px; background: #f9f9f9; }
+                .order-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                .order-table th { background: #333; color: #fff; padding: 12px; text-align: left; }
+                .total { font-size: 20px; font-weight: bold; color: #ddac0b; }
+                .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>AlphaMouv</h1>
+                </div>
+                <div class="content">
+                    <h2>Merci pour votre commande !</h2>
+                    <p>Bonjour ${customerName || 'cher client'},</p>
+                    <p>Nous avons bien recu votre commande et nous vous en remercions.</p>
+
+                    <h3>Recapitulatif de votre commande #${order.id}</h3>
+                    <table class="order-table">
+                        <thead>
+                            <tr>
+                                <th>Produit</th>
+                                <th style="text-align: center;">Quantite</th>
+                                <th style="text-align: right;">Prix</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsList}
+                        </tbody>
+                    </table>
+
+                    <p class="total">Total: ${order.total.toFixed(2)} €</p>
+
+                    <p>Vous recevrez un email de suivi des que votre commande sera expediee.</p>
+                    <p>Si vous avez des questions, n'hesitez pas a nous contacter.</p>
+
+                    <p>A bientot !<br>L'equipe AlphaMouv</p>
+                </div>
+                <div class="footer">
+                    <p>© ${new Date().getFullYear()} AlphaMouv - Tous droits reserves</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        `;
+
+        const { data, error } = await resend.emails.send({
+            from: 'AlphaMouv <onboarding@resend.dev>',
+            to: [customerEmail],
+            subject: `Confirmation de commande #${order.id} - AlphaMouv`,
+            html: emailHtml,
+        });
+
+        if (error) {
+            console.error('Erreur envoi email:', error);
+            return false;
+        }
+
+        console.log('Email de confirmation envoye:', data?.id);
+        return true;
+    } catch (error) {
+        console.error('Erreur envoi email:', error);
+        return false;
+    }
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'alphamouv_secret_2024';
@@ -931,10 +1034,27 @@ app.get('/api/payment/status/:sessionId', authenticateToken, async (req, res) =>
 
         // Mettre a jour le statut de la commande si paye
         if (session.payment_status === 'paid') {
-            dbRun(`
-                UPDATE orders SET status = 'paid', paid_at = CURRENT_TIMESTAMP
-                WHERE stripe_session_id = ?
-            `, [session.id]);
+            // Verifier si la commande n'a pas deja ete traitee
+            const order = dbGet('SELECT * FROM orders WHERE stripe_session_id = ?', [session.id]);
+
+            if (order && order.status !== 'paid') {
+                // Mettre a jour le statut
+                dbRun(`
+                    UPDATE orders SET status = 'paid', paid_at = CURRENT_TIMESTAMP
+                    WHERE stripe_session_id = ?
+                `, [session.id]);
+
+                // Envoyer l'email de confirmation
+                const user = dbGet('SELECT * FROM users WHERE id = ?', [order.user_id]);
+                if (user) {
+                    const customerName = user.prenom ? `${user.prenom} ${user.nom || ''}`.trim() : user.email;
+                    await sendOrderConfirmationEmail(
+                        { ...order, status: 'paid' },
+                        user.email,
+                        customerName
+                    );
+                }
+            }
         }
 
         res.json({

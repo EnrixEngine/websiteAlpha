@@ -8531,8 +8531,9 @@
 
         // ============ SYSTÈME DE CONNEXION COMPLET ============
 
-        // Configuration Google OAuth (vous devrez remplacer par votre vrai Client ID)
-        const GOOGLE_CLIENT_ID = 'VOTRE_CLIENT_ID_GOOGLE.apps.googleusercontent.com';
+        // Configuration Google OAuth
+        // Remplacez cette valeur par votre Client ID Google (depuis Google Cloud Console)
+        const GOOGLE_CLIENT_ID = window.GOOGLE_CLIENT_ID || '143239412081-xxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com';
 
         // État de l'utilisateur
         let currentUser = JSON.parse(localStorage.getItem('alphamouv_user')) || null;
@@ -8603,17 +8604,35 @@
             }
         }
 
-        // Callback appelé après connexion Google réussie
-        function handleGoogleCallback(response) {
-            // La connexion Google nécessite une configuration serveur
-            // Pour l'instant, on affiche un message d'information
-            alert('La connexion avec Google n\'est pas encore disponible.\n\nVeuillez utiliser le formulaire de connexion classique.');
+        // Callback appele apres connexion Google reussie
+        async function handleGoogleCallback(response) {
+            try {
+                // Envoyer le token au serveur pour verification
+                const result = await AlphaMovAPI.Auth.loginWithGoogle(response.credential, GOOGLE_CLIENT_ID);
+
+                if (result.success && result.user) {
+                    // Connexion reussie
+                    currentUser = {
+                        name: result.user.prenom || result.user.nom || result.user.email.split('@')[0],
+                        email: result.user.email,
+                        role: result.user.role,
+                        joinDate: new Date().toISOString()
+                    };
+                    localStorage.setItem('alphamouv_user', JSON.stringify(currentUser));
+
+                    closeAuthPopup();
+                    initUserInterface();
+                    alert('Connexion reussie avec Google ! Bienvenue ' + currentUser.name);
+                }
+            } catch (error) {
+                console.error('Erreur connexion Google:', error);
+                alert('Erreur lors de la connexion avec Google: ' + error.message);
+            }
         }
 
-        // Simulation de connexion Google (mode démo/développement)
+        // Si Google API non disponible
         function simulateGoogleLogin() {
-            // La connexion Google nécessite une configuration serveur
-            alert('La connexion avec Google n\'est pas encore disponible.\n\nVeuillez utiliser le formulaire de connexion classique.');
+            alert('Pour utiliser la connexion Google, vous devez configurer un Client ID Google.\n\nConsultez: https://console.cloud.google.com/apis/credentials');
         }
 
         // Ouvrir le pop-up de connexion

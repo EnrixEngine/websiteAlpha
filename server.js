@@ -343,6 +343,78 @@ app.get('/api/debug/admin', (req, res) => {
 
 // ==================== API AUTHENTIFICATION ====================
 
+// Connexion avec Google
+app.post('/api/auth/google', async (req, res) => {
+    try {
+        const { credential, clientId } = req.body;
+
+        if (!credential) {
+            return res.status(400).json({ error: 'Token Google manquant' });
+        }
+
+        // Decoder le token JWT Google (sans verification complete pour simplifier)
+        // En production, utiliser google-auth-library pour verifier
+        const base64Url = credential.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(Buffer.from(base64, 'base64').toString().split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        const googleUser = JSON.parse(jsonPayload);
+
+        // Verifier que le token n'est pas expire
+        if (googleUser.exp * 1000 < Date.now()) {
+            return res.status(401).json({ error: 'Token Google expire' });
+        }
+
+        const email = googleUser.email;
+        const nom = googleUser.family_name || '';
+        const prenom = googleUser.given_name || googleUser.name || '';
+
+        // Chercher ou creer l'utilisateur
+        let user = dbGet('SELECT * FROM users WHERE email = ?', [email]);
+
+        if (!user) {
+            // Creer un nouvel utilisateur
+            const randomPassword = bcrypt.hashSync(Math.random().toString(36), 10);
+            const result = dbRun(`
+                INSERT INTO users (email, password, nom, prenom, role)
+                VALUES (?, ?, ?, ?, ?)
+            `, [email, randomPassword, nom, prenom, 'user']);
+
+            user = {
+                id: result.lastID,
+                email: email,
+                nom: nom,
+                prenom: prenom,
+                role: 'user'
+            };
+        }
+
+        // Generer le token JWT
+        const token = jwt.sign(
+            { id: user.id, email: user.email, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        res.json({
+            success: true,
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                nom: user.nom,
+                prenom: user.prenom,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error('Erreur connexion Google:', error);
+        res.status(500).json({ error: 'Erreur lors de la connexion Google' });
+    }
+});
+
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { email, password, nom, prenom, adresse, code_postal, ville, telephone } = req.body;

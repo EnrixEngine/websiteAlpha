@@ -84,6 +84,18 @@ const AuthAPI = {
         return data;
     },
 
+    // Connexion avec Google
+    async loginWithGoogle(credential, clientId) {
+        const data = await apiRequest('/auth/google', {
+            method: 'POST',
+            body: JSON.stringify({ credential, clientId }),
+        });
+        if (data.token) {
+            setAuthToken(data.token);
+        }
+        return data;
+    },
+
     // Deconnexion
     logout() {
         setAuthToken(null);

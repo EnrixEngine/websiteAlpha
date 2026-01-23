@@ -49,9 +49,15 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Configuration Stripe
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const STRIPE_PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY;
+// Configuration Stripe (optionnel - le serveur demarre meme sans cles)
+let stripe = null;
+const STRIPE_PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY || '';
+if (process.env.STRIPE_SECRET_KEY) {
+    stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    console.log('Stripe configure en mode', STRIPE_PUBLISHABLE_KEY.includes('test') ? 'TEST' : 'PRODUCTION');
+} else {
+    console.log('Stripe non configure - ajoutez STRIPE_SECRET_KEY pour activer les paiements');
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -817,6 +823,7 @@ app.delete('/api/carousel/:id', authenticateToken, isAdmin, (req, res) => {
 app.get('/api/payment/config', (req, res) => {
     res.json({
         publishableKey: STRIPE_PUBLISHABLE_KEY,
+        configured: !!stripe,
         testMode: !STRIPE_PUBLISHABLE_KEY || STRIPE_PUBLISHABLE_KEY.includes('test')
     });
 });
@@ -824,6 +831,11 @@ app.get('/api/payment/config', (req, res) => {
 // Creer une session de paiement Stripe Checkout
 app.post('/api/payment/create-checkout-session', authenticateToken, async (req, res) => {
     try {
+        // Verifier que Stripe est configure
+        if (!stripe) {
+            return res.status(503).json({ error: 'Paiement non disponible - Stripe non configure' });
+        }
+
         const { items, successUrl, cancelUrl } = req.body;
 
         if (!items || !Array.isArray(items) || items.length === 0) {
@@ -887,6 +899,9 @@ app.post('/api/payment/create-checkout-session', authenticateToken, async (req, 
 // Verifier le statut d'un paiement
 app.get('/api/payment/status/:sessionId', authenticateToken, async (req, res) => {
     try {
+        if (!stripe) {
+            return res.status(503).json({ error: 'Stripe non configure' });
+        }
         const session = await stripe.checkout.sessions.retrieve(req.params.sessionId);
 
         // Mettre a jour le statut de la commande si paye

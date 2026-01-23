@@ -844,18 +844,26 @@ app.post('/api/payment/create-checkout-session', authenticateToken, async (req, 
         }
 
         // Construire les line items pour Stripe
-        const lineItems = items.map(item => ({
-            price_data: {
-                currency: 'eur',
-                product_data: {
-                    name: item.name,
-                    description: item.description || undefined,
-                    images: item.image ? [item.image] : undefined,
+        const lineItems = items.map(item => {
+            // Stripe exige des URLs HTTPS completes pour les images
+            let images = undefined;
+            if (item.image && item.image.startsWith('https://')) {
+                images = [item.image];
+            }
+
+            return {
+                price_data: {
+                    currency: 'eur',
+                    product_data: {
+                        name: item.name || 'Produit',
+                        ...(item.description && { description: item.description }),
+                        ...(images && { images: images }),
+                    },
+                    unit_amount: Math.round(item.price * 100), // Stripe utilise les centimes
                 },
-                unit_amount: Math.round(item.price * 100), // Stripe utilise les centimes
-            },
-            quantity: item.quantity || 1,
-        }));
+                quantity: item.quantity || 1,
+            };
+        });
 
         // Creer la session Stripe Checkout
         const session = await stripe.checkout.sessions.create({
@@ -893,7 +901,9 @@ app.post('/api/payment/create-checkout-session', authenticateToken, async (req, 
         });
     } catch (error) {
         console.error('Erreur creation session Stripe:', error);
-        res.status(500).json({ error: 'Erreur lors de la creation du paiement' });
+        // Retourner le message d'erreur Stripe pour debug
+        const errorMessage = error.message || 'Erreur lors de la creation du paiement';
+        res.status(500).json({ error: errorMessage });
     }
 });
 

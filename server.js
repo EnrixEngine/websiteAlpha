@@ -20,7 +20,7 @@ const rateLimit = require('express-rate-limit');
 // Rate limiters pour differentes routes
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 500, // 500 requetes par IP
+    max: 2000, // 2000 requetes par IP (supporte haut trafic)
     message: { error: 'Trop de requetes, reessayez dans 15 minutes' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -28,7 +28,7 @@ const generalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // 10 tentatives de login par IP
+    max: 20, // 20 tentatives de login par IP
     message: { error: 'Trop de tentatives de connexion, reessayez dans 15 minutes' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -36,7 +36,7 @@ const authLimiter = rateLimit({
 
 const apiLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minute
-    max: 100, // 100 requetes API par minute
+    max: 500, // 500 requetes API par minute
     message: { error: 'Trop de requetes API, reessayez dans 1 minute' },
     standardHeaders: true,
     legacyHeaders: false,

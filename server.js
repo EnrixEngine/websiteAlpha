@@ -179,18 +179,6 @@ async function initDatabase() {
         )
     `);
 
-    db.run(`
-        CREATE TABLE IF NOT EXISTS orders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            numero TEXT UNIQUE NOT NULL,
-            total REAL NOT NULL,
-            statut TEXT DEFAULT 'en_attente',
-            adresse_livraison TEXT,
-            items TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
 
     db.run(`
         CREATE TABLE IF NOT EXISTS newsletter (
@@ -251,6 +239,32 @@ async function initDatabase() {
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
     `);
+
+    // Migration: ajouter stripe_session_id si la table existe deja sans cette colonne
+    try {
+        const tableInfo = db.exec("PRAGMA table_info(orders)");
+        if (tableInfo.length > 0) {
+            const columns = tableInfo[0].values.map(col => col[1]);
+            if (!columns.includes('stripe_session_id')) {
+                db.run('ALTER TABLE orders ADD COLUMN stripe_session_id TEXT');
+                console.log('Migration: colonne stripe_session_id ajoutee');
+            }
+            if (!columns.includes('status')) {
+                db.run('ALTER TABLE orders ADD COLUMN status TEXT DEFAULT "pending"');
+                console.log('Migration: colonne status ajoutee');
+            }
+            if (!columns.includes('shipping_address')) {
+                db.run('ALTER TABLE orders ADD COLUMN shipping_address TEXT');
+                console.log('Migration: colonne shipping_address ajoutee');
+            }
+            if (!columns.includes('paid_at')) {
+                db.run('ALTER TABLE orders ADD COLUMN paid_at TEXT');
+                console.log('Migration: colonne paid_at ajoutee');
+            }
+        }
+    } catch (e) {
+        console.log('Migration orders: ', e.message);
+    }
 
     // Creer ou mettre a jour admin par defaut
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@alphamouv.com';

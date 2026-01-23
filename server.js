@@ -369,6 +369,20 @@ async function initDatabase() {
         console.log('Migration orders: ', e.message);
     }
 
+    // Migration: ajouter auth_provider a la table users
+    try {
+        const userTableInfo = db.exec("PRAGMA table_info(users)");
+        if (userTableInfo.length > 0) {
+            const userColumns = userTableInfo[0].values.map(col => col[1]);
+            if (!userColumns.includes('auth_provider')) {
+                db.run('ALTER TABLE users ADD COLUMN auth_provider TEXT DEFAULT "email"');
+                console.log('Migration: colonne auth_provider ajoutee');
+            }
+        }
+    } catch (e) {
+        console.log('Migration users: ', e.message);
+    }
+
     // Creer ou mettre a jour admin par defaut
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@alphamouv.com';
     const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
@@ -495,19 +509,20 @@ app.post('/api/auth/google', authLimiter, async (req, res) => {
         let user = dbGet('SELECT * FROM users WHERE email = ?', [email]);
 
         if (!user) {
-            // Creer un nouvel utilisateur
+            // Creer un nouvel utilisateur Google
             const randomPassword = bcrypt.hashSync(Math.random().toString(36), 10);
             const result = dbRun(`
-                INSERT INTO users (email, password, nom, prenom, role)
-                VALUES (?, ?, ?, ?, ?)
-            `, [email, randomPassword, nom, prenom, 'user']);
+                INSERT INTO users (email, password, nom, prenom, role, auth_provider)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [email, randomPassword, nom, prenom, 'user', 'google']);
 
             user = {
                 id: result.lastID,
                 email: email,
                 nom: nom,
                 prenom: prenom,
-                role: 'user'
+                role: 'user',
+                auth_provider: 'google'
             };
         }
 

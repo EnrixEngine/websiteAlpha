@@ -18,6 +18,9 @@
     <!-- API Client AlphaMouv -->
     <script src="api.js"></script>
 
+    <!-- Font Awesome pour les icones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
     <style>
         /* Overlay de transition */
         .page-loading-overlay {
@@ -7786,13 +7789,13 @@
 
             <!-- Timeline des évènements -->
             <div class="main-card" style="margin-top: 40px;">
-                <h3 style="color: #ddac0b; font-size: 1.8em; text-align: center; margin-bottom: 30px; font-family: 'Montserrat', sans-serif; font-weight: 700;">Prochains rendez-vous</h3>
+                <h3 style="color: #ddac0b; font-size: 1.8em; text-align: center; margin-bottom: 30px; font-family: 'Montserrat', sans-serif; font-weight: 700;"><i class="fas fa-calendar-alt" style="margin-right: 10px;"></i>Prochains rendez-vous</h3>
 
                 <div class="event-item" data-event-id="event1" style="background: rgba(255, 255, 255, 0.05); border-radius: 15px; padding: 25px; margin-bottom: 20px; border-left: 4px solid #ddac0b; cursor: pointer; transition: all 0.3s ease; position: relative; z-index: 10;">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; pointer-events: none;">
                         <div>
                             <h4 class="event-title" style="color: #ddac0b; font-size: 1.3em; margin-bottom: 8px; font-weight: 700;">Exposition "Mouvement Créatif"</h4>
-                            <p class="event-location" style="color: rgba(255, 255, 255, 0.8); margin-bottom: 5px;">Galerie d'Art Moderne - Paris</p>
+                            <p class="event-location" style="color: rgba(255, 255, 255, 0.8); margin-bottom: 5px;"><i class="fas fa-map-marker-alt" style="color: #ddac0b; margin-right: 6px;"></i>Galerie d'Art Moderne - Paris</p>
                             <p class="event-description" style="color: rgba(255, 255, 255, 0.6); font-size: 0.95em;">Collection complète de mes dernières créations vestimentaires</p>
                         </div>
                         <div style="background: rgba(221, 172, 11, 0.2); padding: 15px 25px; border-radius: 10px; text-align: center; min-width: 120px;">
@@ -7806,7 +7809,7 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; pointer-events: none;">
                         <div>
                             <h4 class="event-title" style="color: #ddac0b; font-size: 1.3em; margin-bottom: 8px; font-weight: 700;">Atelier Créatif Ouvert</h4>
-                            <p class="event-location" style="color: rgba(255, 255, 255, 0.8); margin-bottom: 5px;">Studio AlphaMouv</p>
+                            <p class="event-location" style="color: rgba(255, 255, 255, 0.8); margin-bottom: 5px;"><i class="fas fa-map-marker-alt" style="color: #ddac0b; margin-right: 6px;"></i>Studio AlphaMouv</p>
                             <p class="event-description" style="color: rgba(255, 255, 255, 0.6); font-size: 0.95em;">Venez découvrir mon processus créatif et échanger autour de l'art vestimentaire</p>
                         </div>
                         <div style="background: rgba(221, 172, 11, 0.2); padding: 15px 25px; border-radius: 10px; text-align: center; min-width: 120px;">
@@ -7827,7 +7830,7 @@
             <div class="main-card" style="margin-top: 40px;">
                 <div style="text-align: center; margin-bottom: 40px;">
                     <h3 style="color: #ddac0b; font-size: 2em; margin-bottom: 15px; font-family: 'Montserrat', sans-serif; font-weight: 700;">
-                        Suivez mon actualité
+                        <i class="fab fa-instagram" style="margin-right: 10px;"></i>Suivez mon actualité
                     </h3>
                     <p style="color: rgba(255, 255, 255, 0.8); font-size: 1.1em; max-width: 700px; margin: 0 auto;">
                         Découvrez mes dernières créations, coulisses et inspirations sur Instagram
@@ -7864,8 +7867,9 @@
 
                 <!-- Message si aucun post -->
                 <div id="noInstagramPosts" style="text-align: center; padding: 60px 20px; color: rgba(255, 255, 255, 0.5);">
+                    <i class="fab fa-instagram" style="font-size: 3em; margin-bottom: 15px; display: block;"></i>
                     <p style="font-size: 1.2em; margin-bottom: 10px;">Aucun post Instagram pour le moment</p>
-                    <p style="font-size: 0.9em;">Les derniers posts apparaîtront ici</p>
+                    <p style="font-size: 0.9em;">Les derniers posts apparaitront ici</p>
                 </div>
 
                 <!-- Lien vers Instagram -->
@@ -7881,7 +7885,7 @@
                         font-weight: 600;
                         transition: all 0.3s ease;
                     " onmouseover="this.style.background='rgba(221, 172, 11, 0.15)'; this.style.borderColor='rgba(221, 172, 11, 0.6)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'; this.style.borderColor='rgba(221, 172, 11, 0.3)'">
-                        → Voir plus sur Instagram
+                        <i class="fab fa-instagram" style="margin-right: 8px;"></i>Voir plus sur Instagram
                     </a>
                 </div>
             </div>
@@ -7890,7 +7894,7 @@
         <!-- Section Créations Uniques -->
         <div class="content-section" id="creations">
             <div class="main-card">
-                <h2 style="color: #ddac0b; font-size: 2.5em; text-align: center; margin-bottom: 30px; text-shadow: 0 0 20px rgba(221, 172, 11, 0.5);">Créations Uniques</h2>
+                <h2 style="color: #ddac0b; font-size: 2.5em; text-align: center; margin-bottom: 30px; text-shadow: 0 0 20px rgba(221, 172, 11, 0.5);"><i class="fas fa-paint-brush" style="margin-right: 12px;"></i>Creations Uniques</h2>
                 <p class="about-text">
                     Chaque vêtement que je crée est une pièce unique, pensée et réalisée à la main. Mes créations ne sont pas de simples habits, ce sont des toiles sur lesquelles j'exprime mes émotions, mes rêves et mon parcours personnel. Chaque trait, chaque couleur raconte
                     une partie de mon histoire.
@@ -7927,7 +7931,7 @@
         <!-- Section Art & Expression -->
         <div class="content-section" id="art">
             <div class="main-card">
-                <h2 style="color: #ddac0b; font-size: 2.5em; text-align: center; margin-bottom: 30px; text-shadow: 0 0 20px rgba(221, 172, 11, 0.5);">Art & Expression</h2>
+                <h2 style="color: #ddac0b; font-size: 2.5em; text-align: center; margin-bottom: 30px; text-shadow: 0 0 20px rgba(221, 172, 11, 0.5);"><i class="fas fa-palette" style="margin-right: 12px;"></i>Art & Expression</h2>
                 <p class="about-text">
                     L'art est mon langage, ma façon de communiquer avec le monde. À travers mes créations, j'exprime ce que les mots ne peuvent pas dire. Chaque œuvre porte en elle une émotion, un message, un fragment de mon âme. C'est ma manière de transformer la douleur
                     en beauté, les épreuves en force créatrice.
@@ -7964,7 +7968,7 @@
         <!-- Section Mon Histoire -->
         <div class="content-section" id="histoire">
             <div class="main-card">
-                <h2 style="color: #ddac0b; font-size: 2.5em; text-align: center; margin-bottom: 30px; text-shadow: 0 0 20px rgba(221, 172, 11, 0.5);">Mon Histoire</h2>
+                <h2 style="color: #ddac0b; font-size: 2.5em; text-align: center; margin-bottom: 30px; text-shadow: 0 0 20px rgba(221, 172, 11, 0.5);"><i class="fas fa-book-open" style="margin-right: 12px;"></i>Mon Histoire</h2>
                 <p class="about-text">
                     Mon parcours n'a pas été facile. J'ai traversé des épreuves qui m'ont forgé, façonné en tant que personne et artiste. Chaque obstacle surmonté, chaque moment difficile est devenu une source d'inspiration. À 17 ans, je transforme mes expériences en art,
                     mes blessures en créations. Mon histoire est celle d'une renaissance par l'art, d'une transformation continue où chaque création marque une étape de mon évolution.
@@ -8000,7 +8004,7 @@
 
         <!-- Section Contact & Newsletter -->
         <div class="contact-section" id="contact">
-            <h2>Contact</h2>
+            <h2><i class="fas fa-paper-plane" style="margin-right: 10px;"></i>Contact</h2>
 
             <div class="contact-grid">
                 <div class="contact-box gmail-card">
@@ -8044,8 +8048,8 @@
             </div>
 
             <div class="newsletter-box">
-                <h3>Newsletter</h3>
-                <p>Restez informé de mes nouvelles créations, collections et évènements !</p>
+                <h3><i class="fas fa-envelope" style="margin-right: 8px;"></i>Newsletter</h3>
+                <p>Restez informe de mes nouvelles creations, collections et evenements !</p>
                 <form class="newsletter-form" onsubmit="return handleNewsletter(event)">
                     <input type="email" placeholder="Votre adresse email" required>
                     <button type="submit">S'inscrire</button>

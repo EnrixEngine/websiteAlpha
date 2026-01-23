@@ -4744,20 +4744,6 @@
             const grid = document.getElementById('productsGrid');
             const token = localStorage.getItem('alphamouv_token');
             grid.innerHTML = filteredProducts.map(product => {
-                var stockStatus = '';
-                var stockClass = '';
-                if (product.stock !== undefined) {
-                    if (product.stock <= 0) {
-                        stockStatus = 'Rupture';
-                        stockClass = 'out-of-stock';
-                    } else if (product.stock <= 5) {
-                        stockStatus = 'Stock limité';
-                        stockClass = 'low-stock';
-                    } else {
-                        stockStatus = 'En stock';
-                        stockClass = 'in-stock';
-                    }
-                }
                 return `
                 <div class="product-card" data-category="${product.category}" data-type="${product.type}" data-price="${product.price}" onclick="showProductDetail(${product.id})">
                     ${token ? `
@@ -4771,7 +4757,6 @@
                     }
                     <div class="product-name-overlay">
                         ${product.name}
-                        ${stockStatus ? `<div class="stock-indicator ${stockClass}">${stockStatus}</div>` : ''}
                     </div>
                 </div>
             `}).join('');
@@ -4968,6 +4953,35 @@
             document.getElementById('detailName').textContent = product.name;
             document.getElementById('detailPrice').textContent = `${product.price}€`;
             document.getElementById('detailDescription').textContent = product.description;
+
+            // Afficher l'indicateur de stock
+            let stockIndicatorEl = document.getElementById('detailStockIndicator');
+            if (!stockIndicatorEl) {
+                // Créer l'élément s'il n'existe pas
+                stockIndicatorEl = document.createElement('div');
+                stockIndicatorEl.id = 'detailStockIndicator';
+                stockIndicatorEl.className = 'stock-indicator';
+                const priceEl = document.getElementById('detailPrice');
+                priceEl.parentNode.insertBefore(stockIndicatorEl, priceEl.nextSibling);
+            }
+
+            if (product.stock !== undefined) {
+                if (product.stock <= 0) {
+                    stockIndicatorEl.textContent = 'Rupture de stock';
+                    stockIndicatorEl.className = 'stock-indicator out-of-stock';
+                    stockIndicatorEl.style.display = 'inline-block';
+                } else if (product.stock <= 5) {
+                    stockIndicatorEl.textContent = `Stock limité (${product.stock} restants)`;
+                    stockIndicatorEl.className = 'stock-indicator low-stock';
+                    stockIndicatorEl.style.display = 'inline-block';
+                } else {
+                    stockIndicatorEl.textContent = 'En stock';
+                    stockIndicatorEl.className = 'stock-indicator in-stock';
+                    stockIndicatorEl.style.display = 'inline-block';
+                }
+            } else {
+                stockIndicatorEl.style.display = 'none';
+            }
 
             // Afficher le modal
             const modal = document.getElementById('productDetailModal');

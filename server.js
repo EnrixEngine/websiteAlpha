@@ -338,8 +338,38 @@ async function initDatabase() {
             items TEXT,
             shipping_address TEXT,
             paid_at TEXT,
+            promo_code TEXT,
+            discount_amount REAL DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    `);
+
+    // Table wishlist
+    db.run(`
+        CREATE TABLE IF NOT EXISTS wishlist (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            product_id INTEGER NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (product_id) REFERENCES products(id),
+            UNIQUE(user_id, product_id)
+        )
+    `);
+
+    // Table codes promo
+    db.run(`
+        CREATE TABLE IF NOT EXISTS promo_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            discount_percent INTEGER NOT NULL,
+            max_uses INTEGER DEFAULT NULL,
+            used_count INTEGER DEFAULT 0,
+            min_order_amount REAL DEFAULT 0,
+            active INTEGER DEFAULT 1,
+            expires_at TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     `);
 
@@ -364,9 +394,31 @@ async function initDatabase() {
                 db.run('ALTER TABLE orders ADD COLUMN paid_at TEXT');
                 console.log('Migration: colonne paid_at ajoutee');
             }
+            if (!columns.includes('promo_code')) {
+                db.run('ALTER TABLE orders ADD COLUMN promo_code TEXT');
+                console.log('Migration: colonne promo_code ajoutee');
+            }
+            if (!columns.includes('discount_amount')) {
+                db.run('ALTER TABLE orders ADD COLUMN discount_amount REAL DEFAULT 0');
+                console.log('Migration: colonne discount_amount ajoutee');
+            }
         }
     } catch (e) {
         console.log('Migration orders: ', e.message);
+    }
+
+    // Migration: ajouter stock aux produits si manquant
+    try {
+        const productTableInfo = db.exec("PRAGMA table_info(products)");
+        if (productTableInfo.length > 0) {
+            const productColumns = productTableInfo[0].values.map(col => col[1]);
+            if (!productColumns.includes('stock')) {
+                db.run('ALTER TABLE products ADD COLUMN stock INTEGER DEFAULT 0');
+                console.log('Migration: colonne stock ajoutee aux produits');
+            }
+        }
+    } catch (e) {
+        console.log('Migration products: ', e.message);
     }
 
     // Migration: ajouter auth_provider a la table users
@@ -969,11 +1021,46 @@ app.post('/api/payment/create-checkout-session', authenticateToken, async (req, 
             return res.status(503).json({ error: 'Paiement non disponible - Stripe non configure' });
         }
 
-        const { items, successUrl, cancelUrl } = req.body;
+        const { items, successUrl, cancelUrl, promoCode } = req.body;
 
         if (!items || !Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ error: 'Panier vide' });
         }
+
+        // Verifier le stock disponible
+        for (const item of items) {
+            const product = dbGet('SELECT stock, nom FROM products WHERE id = ?', [item.id]);
+            if (product && product.stock < (item.quantity || 1)) {
+                return res.status(400).json({
+                    error: `Stock insuffisant pour "${product.nom}" (${product.stock} disponible)`
+                });
+            }
+        }
+
+        let subtotal = items.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+        let discountAmount = 0;
+        let promoCodeUsed = null;
+
+        // Appliquer le code promo si fourni
+        if (promoCode) {
+            const promo = dbGet(`
+                SELECT * FROM promo_codes
+                WHERE code = ? AND active = 1
+            `, [promoCode.toUpperCase()]);
+
+            if (promo) {
+                const validExpiry = !promo.expires_at || new Date(promo.expires_at) >= new Date();
+                const validUses = !promo.max_uses || promo.used_count < promo.max_uses;
+                const validMinOrder = subtotal >= (promo.min_order_amount || 0);
+
+                if (validExpiry && validUses && validMinOrder) {
+                    discountAmount = (subtotal * promo.discount_percent) / 100;
+                    promoCodeUsed = promo.code;
+                }
+            }
+        }
+
+        const finalTotal = subtotal - discountAmount;
 
         // Construire les line items pour Stripe
         const lineItems = items.map(item => {
@@ -997,6 +1084,20 @@ app.post('/api/payment/create-checkout-session', authenticateToken, async (req, 
             };
         });
 
+        // Ajouter la reduction comme line item negatif si applicable
+        if (discountAmount > 0) {
+            lineItems.push({
+                price_data: {
+                    currency: 'eur',
+                    product_data: {
+                        name: `Reduction (${promoCodeUsed})`,
+                    },
+                    unit_amount: -Math.round(discountAmount * 100),
+                },
+                quantity: 1,
+            });
+        }
+
         // Creer la session Stripe Checkout
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -1007,6 +1108,7 @@ app.post('/api/payment/create-checkout-session', authenticateToken, async (req, 
             customer_email: req.user.email,
             metadata: {
                 user_id: req.user.id.toString(),
+                promo_code: promoCodeUsed || '',
             },
             shipping_address_collection: {
                 allowed_countries: ['FR', 'BE', 'CH', 'LU', 'MC'],
@@ -1016,14 +1118,16 @@ app.post('/api/payment/create-checkout-session', authenticateToken, async (req, 
 
         // Enregistrer la commande en base
         const orderResult = dbRun(`
-            INSERT INTO orders (user_id, stripe_session_id, total, status, items)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO orders (user_id, stripe_session_id, total, status, items, promo_code, discount_amount)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         `, [
             req.user.id,
             session.id,
-            items.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0),
+            finalTotal,
             'pending',
-            JSON.stringify(items)
+            JSON.stringify(items),
+            promoCodeUsed,
+            discountAmount
         ]);
 
         res.json({
@@ -1058,6 +1162,28 @@ app.get('/api/payment/status/:sessionId', authenticateToken, async (req, res) =>
                     UPDATE orders SET status = 'paid', paid_at = CURRENT_TIMESTAMP
                     WHERE stripe_session_id = ?
                 `, [session.id]);
+
+                // Decrementer le stock des produits
+                try {
+                    const items = JSON.parse(order.items || '[]');
+                    for (const item of items) {
+                        const product = dbGet('SELECT stock FROM products WHERE id = ?', [item.id]);
+                        if (product) {
+                            const newStock = Math.max(0, product.stock - (item.quantity || 1));
+                            dbRun('UPDATE products SET stock = ? WHERE id = ?', [newStock, item.id]);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Erreur decrementation stock:', e);
+                }
+
+                // Incrementer le compteur du code promo si utilise
+                if (order.promo_code) {
+                    dbRun(`
+                        UPDATE promo_codes SET used_count = used_count + 1
+                        WHERE code = ?
+                    `, [order.promo_code]);
+                }
 
                 // Envoyer l'email de confirmation
                 const user = dbGet('SELECT * FROM users WHERE id = ?', [order.user_id]);
@@ -1217,6 +1343,295 @@ app.put('/api/admin/users/:id/role', authenticateToken, isAdmin, (req, res) => {
 
         dbRun('UPDATE users SET role = ? WHERE id = ?', [role, userId]);
         res.json({ success: true, message: 'Role mis a jour' });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// ==================== API WISHLIST ====================
+
+// Ajouter a la wishlist
+app.post('/api/wishlist', authenticateToken, (req, res) => {
+    try {
+        const { product_id } = req.body;
+
+        // Verifier que le produit existe
+        const product = dbGet('SELECT id FROM products WHERE id = ?', [product_id]);
+        if (!product) {
+            return res.status(404).json({ error: 'Produit non trouve' });
+        }
+
+        // Verifier si deja dans la wishlist
+        const existing = dbGet('SELECT id FROM wishlist WHERE user_id = ? AND product_id = ?', [req.user.id, product_id]);
+        if (existing) {
+            return res.status(400).json({ error: 'Produit deja dans la wishlist' });
+        }
+
+        dbRun('INSERT INTO wishlist (user_id, product_id) VALUES (?, ?)', [req.user.id, product_id]);
+        res.json({ success: true, message: 'Produit ajoute a la wishlist' });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// Retirer de la wishlist
+app.delete('/api/wishlist/:productId', authenticateToken, (req, res) => {
+    try {
+        dbRun('DELETE FROM wishlist WHERE user_id = ? AND product_id = ?', [req.user.id, req.params.productId]);
+        res.json({ success: true, message: 'Produit retire de la wishlist' });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// Obtenir la wishlist
+app.get('/api/wishlist', authenticateToken, (req, res) => {
+    try {
+        const wishlist = dbAll(`
+            SELECT w.id, w.product_id, w.created_at, p.nom, p.prix, p.prix_promo, p.image, p.images, p.stock
+            FROM wishlist w
+            JOIN products p ON w.product_id = p.id
+            WHERE w.user_id = ?
+            ORDER BY w.created_at DESC
+        `, [req.user.id]);
+
+        res.json(wishlist.map(item => ({
+            ...item,
+            images: item.images ? JSON.parse(item.images) : []
+        })));
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// ==================== API CODES PROMO ====================
+
+// Verifier un code promo
+app.post('/api/promo/verify', authenticateToken, (req, res) => {
+    try {
+        const { code, orderTotal } = req.body;
+
+        const promo = dbGet(`
+            SELECT * FROM promo_codes
+            WHERE code = ? AND active = 1
+        `, [code.toUpperCase()]);
+
+        if (!promo) {
+            return res.status(404).json({ error: 'Code promo invalide' });
+        }
+
+        // Verifier expiration
+        if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
+            return res.status(400).json({ error: 'Code promo expire' });
+        }
+
+        // Verifier nombre d'utilisations
+        if (promo.max_uses && promo.used_count >= promo.max_uses) {
+            return res.status(400).json({ error: 'Code promo epuise' });
+        }
+
+        // Verifier montant minimum
+        if (promo.min_order_amount && orderTotal < promo.min_order_amount) {
+            return res.status(400).json({
+                error: `Commande minimum de ${promo.min_order_amount}€ requise`
+            });
+        }
+
+        const discount = (orderTotal * promo.discount_percent) / 100;
+
+        res.json({
+            valid: true,
+            code: promo.code,
+            discount_percent: promo.discount_percent,
+            discount_amount: discount,
+            new_total: orderTotal - discount
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// Admin: Creer un code promo
+app.post('/api/admin/promo', authenticateToken, isAdmin, (req, res) => {
+    try {
+        const { code, discount_percent, max_uses, min_order_amount, expires_at } = req.body;
+
+        if (!code || !discount_percent) {
+            return res.status(400).json({ error: 'Code et pourcentage requis' });
+        }
+
+        if (discount_percent < 1 || discount_percent > 100) {
+            return res.status(400).json({ error: 'Pourcentage entre 1 et 100' });
+        }
+
+        const result = dbRun(`
+            INSERT INTO promo_codes (code, discount_percent, max_uses, min_order_amount, expires_at)
+            VALUES (?, ?, ?, ?, ?)
+        `, [code.toUpperCase(), discount_percent, max_uses || null, min_order_amount || 0, expires_at || null]);
+
+        res.json({ success: true, id: result.lastID });
+    } catch (error) {
+        if (error.message?.includes('UNIQUE')) {
+            return res.status(400).json({ error: 'Ce code existe deja' });
+        }
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// Admin: Liste des codes promo
+app.get('/api/admin/promo', authenticateToken, isAdmin, (req, res) => {
+    try {
+        const promos = dbAll('SELECT * FROM promo_codes ORDER BY created_at DESC');
+        res.json(promos);
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// Admin: Modifier un code promo
+app.put('/api/admin/promo/:id', authenticateToken, isAdmin, (req, res) => {
+    try {
+        const { active, discount_percent, max_uses, min_order_amount, expires_at } = req.body;
+
+        dbRun(`
+            UPDATE promo_codes
+            SET active = ?, discount_percent = ?, max_uses = ?, min_order_amount = ?, expires_at = ?
+            WHERE id = ?
+        `, [active ? 1 : 0, discount_percent, max_uses || null, min_order_amount || 0, expires_at || null, req.params.id]);
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// Admin: Supprimer un code promo
+app.delete('/api/admin/promo/:id', authenticateToken, isAdmin, (req, res) => {
+    try {
+        dbRun('DELETE FROM promo_codes WHERE id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// ==================== API STATS AVANCEES ====================
+
+app.get('/api/admin/stats/advanced', authenticateToken, isAdmin, (req, res) => {
+    try {
+        // Stats de base
+        const usersCount = dbGet('SELECT COUNT(*) as count FROM users WHERE role = "user"');
+        const ordersCount = dbGet('SELECT COUNT(*) as count FROM orders WHERE status = "paid"');
+        const productsCount = dbGet('SELECT COUNT(*) as count FROM products WHERE actif = 1');
+        const newsletterCount = dbGet('SELECT COUNT(*) as count FROM newsletter WHERE actif = 1');
+
+        // Revenue total
+        const revenueResult = dbGet('SELECT SUM(total) as total FROM orders WHERE status = "paid"');
+
+        // Revenue du mois
+        const monthRevenue = dbGet(`
+            SELECT SUM(total) as total FROM orders
+            WHERE status = "paid"
+            AND strftime('%Y-%m', paid_at) = strftime('%Y-%m', 'now')
+        `);
+
+        // Commandes du mois
+        const monthOrders = dbGet(`
+            SELECT COUNT(*) as count FROM orders
+            WHERE status = "paid"
+            AND strftime('%Y-%m', paid_at) = strftime('%Y-%m', 'now')
+        `);
+
+        // Top 5 produits vendus
+        const topProducts = dbAll(`
+            SELECT p.id, p.nom, p.image, SUM(1) as total_sold
+            FROM orders o, json_each(o.items) as item
+            JOIN products p ON json_extract(item.value, '$.id') = p.id
+            WHERE o.status = 'paid'
+            GROUP BY p.id
+            ORDER BY total_sold DESC
+            LIMIT 5
+        `);
+
+        // Produits en rupture de stock
+        const lowStock = dbAll(`
+            SELECT id, nom, stock FROM products
+            WHERE actif = 1 AND stock <= 5
+            ORDER BY stock ASC
+            LIMIT 10
+        `);
+
+        // Dernieres commandes
+        const recentOrders = dbAll(`
+            SELECT o.id, o.total, o.status, o.created_at, u.email, u.prenom, u.nom
+            FROM orders o
+            LEFT JOIN users u ON o.user_id = u.id
+            ORDER BY o.created_at DESC
+            LIMIT 10
+        `);
+
+        // Stats par statut de commande
+        const ordersByStatus = dbAll(`
+            SELECT status, COUNT(*) as count FROM orders
+            GROUP BY status
+        `);
+
+        // Codes promo actifs
+        const activePromos = dbGet('SELECT COUNT(*) as count FROM promo_codes WHERE active = 1');
+
+        res.json({
+            users: usersCount?.count || 0,
+            orders: ordersCount?.count || 0,
+            products: productsCount?.count || 0,
+            newsletter: newsletterCount?.count || 0,
+            revenue: revenueResult?.total || 0,
+            monthRevenue: monthRevenue?.total || 0,
+            monthOrders: monthOrders?.count || 0,
+            topProducts: topProducts || [],
+            lowStock: lowStock || [],
+            recentOrders: recentOrders || [],
+            ordersByStatus: ordersByStatus || [],
+            activePromos: activePromos?.count || 0
+        });
+    } catch (error) {
+        console.error('Erreur stats avancees:', error);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// ==================== API GESTION STOCK ====================
+
+// Decrementer le stock apres paiement
+app.post('/api/stock/decrement', authenticateToken, async (req, res) => {
+    try {
+        const { items } = req.body;
+
+        for (const item of items) {
+            const product = dbGet('SELECT stock FROM products WHERE id = ?', [item.id]);
+            if (product && product.stock > 0) {
+                const newStock = Math.max(0, product.stock - (item.quantity || 1));
+                dbRun('UPDATE products SET stock = ? WHERE id = ?', [newStock, item.id]);
+            }
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// Admin: Mettre a jour le statut d'une commande
+app.put('/api/admin/orders/:id/status', authenticateToken, isAdmin, (req, res) => {
+    try {
+        const { status } = req.body;
+        const validStatuses = ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'];
+
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ error: 'Statut invalide' });
+        }
+
+        dbRun('UPDATE orders SET status = ? WHERE id = ?', [status, req.params.id]);
+        res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
     }

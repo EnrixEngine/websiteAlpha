@@ -2433,6 +2433,519 @@
             border-color: #ddac0b;
         }
 
+        /* Orders Modal */
+        .orders-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .order-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .order-card:hover {
+            border-color: rgba(221, 172, 11, 0.3);
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .order-number {
+            font-weight: 600;
+            color: #ddac0b;
+            font-size: 1.1em;
+        }
+
+        .order-date {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9em;
+        }
+
+        .order-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .order-status.pending { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+        .order-status.paid { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .order-status.processing { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        .order-status.shipped { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+        .order-status.delivered { background: rgba(34, 197, 94, 0.3); color: #22c55e; }
+        .order-status.cancelled { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+        .order-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .order-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        .order-item-image {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .order-item-info {
+            flex: 1;
+        }
+
+        .order-item-name {
+            color: white;
+            font-weight: 500;
+        }
+
+        .order-item-details {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.85em;
+        }
+
+        .order-total {
+            text-align: right;
+            font-size: 1.2em;
+            color: #ddac0b;
+            font-weight: 600;
+        }
+
+        .orders-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Wishlist Modal */
+        .wishlist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .wishlist-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .wishlist-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(221, 172, 11, 0.4);
+        }
+
+        .wishlist-card-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .wishlist-card-content {
+            padding: 20px;
+        }
+
+        .wishlist-card-name {
+            color: white;
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .wishlist-card-price {
+            color: #ddac0b;
+            font-weight: 600;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+
+        .wishlist-card-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .wishlist-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .wishlist-btn-cart {
+            background: linear-gradient(135deg, #ddac0b, #b8900a);
+            color: #000;
+        }
+
+        .wishlist-btn-remove {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .wishlist-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Product Wishlist Button */
+        .product-wishlist-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .product-wishlist-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: white;
+            transition: all 0.3s ease;
+        }
+
+        .product-wishlist-btn:hover,
+        .product-wishlist-btn.active {
+            background: rgba(239, 68, 68, 0.8);
+        }
+
+        .product-wishlist-btn.active svg {
+            fill: white;
+        }
+
+        /* Stock indicator */
+        .stock-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .stock-indicator.in-stock {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .stock-indicator.low-stock {
+            background: rgba(234, 179, 8, 0.2);
+            color: #eab308;
+        }
+
+        .stock-indicator.out-of-stock {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        /* Promo Code in Cart */
+        .promo-code-section {
+            padding: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 15px;
+        }
+
+        .promo-code-input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .promo-code-input {
+            flex: 1;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+
+        .promo-code-input:focus {
+            outline: none;
+            border-color: #ddac0b;
+        }
+
+        .promo-code-btn {
+            padding: 10px 20px;
+            background: rgba(221, 172, 11, 0.2);
+            border: 1px solid rgba(221, 172, 11, 0.4);
+            border-radius: 8px;
+            color: #ddac0b;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .promo-code-btn:hover {
+            background: rgba(221, 172, 11, 0.3);
+        }
+
+        .promo-code-success {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(34, 197, 94, 0.2);
+            border-radius: 8px;
+            color: #22c55e;
+            font-size: 0.9em;
+        }
+
+        .promo-code-error {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(239, 68, 68, 0.2);
+            border-radius: 8px;
+            color: #ef4444;
+            font-size: 0.9em;
+        }
+
+        .discount-line {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            color: #22c55e;
+            font-size: 0.9em;
+        }
+
+        /* Admin Stats Dashboard */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .stats-card-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .stats-card-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #ddac0b;
+            margin-bottom: 5px;
+        }
+
+        .stats-card-label {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9em;
+        }
+
+        /* Admin Orders Table */
+        .admin-orders-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .admin-orders-table th,
+        .admin-orders-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .admin-orders-table th {
+            color: #ddac0b;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+        }
+
+        .admin-orders-table td {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .admin-orders-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .status-select {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: white;
+            cursor: pointer;
+        }
+
+        /* Admin Promo Codes */
+        .promo-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .promo-form input,
+        .promo-form select {
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+        }
+
+        .promo-form input:focus,
+        .promo-form select:focus {
+            outline: none;
+            border-color: #ddac0b;
+        }
+
+        .promo-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .promo-table th,
+        .promo-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .promo-table th {
+            color: #ddac0b;
+            font-weight: 600;
+        }
+
+        .promo-table td {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .promo-status {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .promo-status.active {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .promo-status.inactive {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        /* Top Products */
+        .top-products-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .top-product-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        .top-product-rank {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #ddac0b, #b8900a);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #000;
+        }
+
+        .top-product-image {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .top-product-name {
+            flex: 1;
+            color: white;
+        }
+
+        .top-product-sales {
+            color: #ddac0b;
+            font-weight: 600;
+        }
+
+        /* Low Stock Alert */
+        .low-stock-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .low-stock-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 10px;
+        }
+
+        .low-stock-item .product-name {
+            color: white;
+        }
+
+        .low-stock-item .stock-count {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
         /* Responsive Tablette */
         @media (max-width: 1024px) {
             .header-content {
@@ -3432,6 +3945,28 @@
                 Produits
             </button>
 
+            <button class="admin-nav-item" onclick="switchAdminSection('orders')" data-section="orders">
+                <svg class="admin-nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/>
+                    <path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                </svg>
+                Commandes
+            </button>
+
+            <button class="admin-nav-item" onclick="switchAdminSection('stats')" data-section="stats">
+                <svg class="admin-nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
+                </svg>
+                Statistiques
+            </button>
+
+            <button class="admin-nav-item" onclick="switchAdminSection('promo')" data-section="promo">
+                <svg class="admin-nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm2.5 3a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm6.207.293a1 1 0 00-1.414 0l-6 6a1 1 0 101.414 1.414l6-6a1 1 0 000-1.414zM12.5 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z" clip-rule="evenodd"/>
+                </svg>
+                Codes Promo
+            </button>
+
             <button class="admin-nav-item" onclick="switchAdminSection('logs')" data-section="logs">
                 <svg class="admin-nav-icon" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
@@ -3533,6 +4068,125 @@
                         <button class="btn-clear-logs" onclick="clearLogs()">Vider</button>
                     </div>
                     <div class="logs-container" id="logsContainer"></div>
+                </div>
+            </div>
+
+            <!-- Orders Section -->
+            <div id="adminSection-orders" class="admin-section-content">
+                <div class="admin-content-header">
+                    <h3>Gestion des Commandes</h3>
+                </div>
+                <div class="admin-content-body">
+                    <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                        <select id="orderStatusFilter" onchange="filterAdminOrders()" style="padding: 10px 15px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white;">
+                            <option value="all">Tous les statuts</option>
+                            <option value="pending">En attente</option>
+                            <option value="paid">Payée</option>
+                            <option value="processing">En préparation</option>
+                            <option value="shipped">Expédiée</option>
+                            <option value="delivered">Livrée</option>
+                            <option value="cancelled">Annulée</option>
+                        </select>
+                        <button onclick="loadAdminOrders()" style="padding: 10px 20px; background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.4); border-radius: 8px; color: #22c55e; cursor: pointer;">Actualiser</button>
+                    </div>
+                    <div class="admin-orders-container" id="adminOrdersContainer">
+                        <table class="admin-orders-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Client</th>
+                                    <th>Total</th>
+                                    <th>Date</th>
+                                    <th>Statut</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminOrdersBody">
+                                <!-- Les commandes seront chargées ici -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Section -->
+            <div id="adminSection-stats" class="admin-section-content">
+                <div class="admin-content-header">
+                    <h3>Statistiques Avancées</h3>
+                </div>
+                <div class="admin-content-body">
+                    <div class="stats-grid" id="statsGrid">
+                        <!-- Les stats seront chargées ici -->
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
+                        <div>
+                            <h4 style="color: #ddac0b; margin-bottom: 15px;">Top 5 Produits Vendus</h4>
+                            <div class="top-products-list" id="topProductsList">
+                                <!-- Chargé dynamiquement -->
+                            </div>
+                        </div>
+                        <div>
+                            <h4 style="color: #ef4444; margin-bottom: 15px;">Alertes Stock Faible</h4>
+                            <div class="low-stock-list" id="lowStockList">
+                                <!-- Chargé dynamiquement -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 30px;">
+                        <h4 style="color: white; margin-bottom: 15px;">Dernières Commandes</h4>
+                        <table class="admin-orders-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Client</th>
+                                    <th>Total</th>
+                                    <th>Statut</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentOrdersBody">
+                                <!-- Chargé dynamiquement -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Promo Codes Section -->
+            <div id="adminSection-promo" class="admin-section-content">
+                <div class="admin-content-header">
+                    <h3>Codes Promo</h3>
+                </div>
+                <div class="admin-content-body">
+                    <h4 style="color: white; margin-bottom: 15px;">Créer un nouveau code</h4>
+                    <div class="promo-form" id="promoForm">
+                        <input type="text" id="promoCode" placeholder="CODE (ex: PROMO20)" style="text-transform: uppercase;">
+                        <input type="number" id="promoPercent" placeholder="Réduction %" min="1" max="100">
+                        <input type="number" id="promoMaxUses" placeholder="Utilisations max (optionnel)">
+                        <input type="number" id="promoMinOrder" placeholder="Commande min € (optionnel)" step="0.01">
+                        <input type="date" id="promoExpires" placeholder="Date expiration">
+                        <button onclick="createPromoCode()" style="padding: 12px 25px; background: linear-gradient(135deg, #ddac0b, #b8900a); border: none; border-radius: 8px; color: #000; font-weight: 600; cursor: pointer;">Créer</button>
+                    </div>
+
+                    <h4 style="color: white; margin: 30px 0 15px;">Codes existants</h4>
+                    <table class="promo-table">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Réduction</th>
+                                <th>Utilisations</th>
+                                <th>Min. commande</th>
+                                <th>Expiration</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="promoCodesBody">
+                            <!-- Les codes seront chargés ici -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -3675,6 +4329,8 @@
         <a href="blog.html" class="nav-link">Accueil</a>
         <a href="#" class="nav-link" onclick="openCollectionsModal(); closeMenu(); event.preventDefault();">Collections</a>
         <a href="#" class="nav-link" onclick="openAboutModal(); closeMenu(); event.preventDefault();">À propos</a>
+        <a href="#" class="nav-link user-only" onclick="openOrdersModal(); closeMenu(); event.preventDefault();" style="display: none;">Mes Commandes</a>
+        <a href="#" class="nav-link user-only" onclick="openWishlistModal(); closeMenu(); event.preventDefault();" style="display: none;">Ma Wishlist</a>
     </div>
 
     <!-- Header -->
@@ -3788,6 +4444,42 @@
         </div>
     </div>
 
+    <!-- Modal Mes Commandes -->
+    <div class="page-modal" id="ordersModal">
+        <div class="page-modal-content">
+            <div class="page-modal-header">
+                <h1 class="page-modal-title">Mes Commandes</h1>
+                <button class="page-modal-close" onclick="closeOrdersModal()">×</button>
+            </div>
+            <div class="orders-list" id="ordersContent">
+                <!-- Le contenu sera généré par JavaScript -->
+            </div>
+            <div id="ordersEmpty" class="orders-empty" style="display: none;">
+                <div style="font-size: 4em; margin-bottom: 20px;">📦</div>
+                <p style="font-size: 1.2em; margin-bottom: 10px;">Aucune commande pour le moment</p>
+                <p>Vos commandes apparaîtront ici une fois effectuées.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Wishlist -->
+    <div class="page-modal" id="wishlistModal">
+        <div class="page-modal-content">
+            <div class="page-modal-header">
+                <h1 class="page-modal-title">Ma Wishlist</h1>
+                <button class="page-modal-close" onclick="closeWishlistModal()">×</button>
+            </div>
+            <div class="wishlist-grid" id="wishlistContent">
+                <!-- Le contenu sera généré par JavaScript -->
+            </div>
+            <div id="wishlistEmpty" class="orders-empty" style="display: none;">
+                <div style="font-size: 4em; margin-bottom: 20px;">❤️</div>
+                <p style="font-size: 1.2em; margin-bottom: 10px;">Votre wishlist est vide</p>
+                <p>Ajoutez des produits en cliquant sur le coeur sur les articles qui vous plaisent.</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Panier latéral -->
     <div class="cart-sidebar" id="cartSidebar">
         <div class="cart-header">
@@ -3801,6 +4493,21 @@
             </div>
         </div>
         <div class="cart-footer" id="cartFooter" style="display: none;">
+            <div class="promo-code-section">
+                <div class="promo-code-input-group">
+                    <input type="text" class="promo-code-input" id="cartPromoCode" placeholder="Code promo">
+                    <button class="promo-code-btn" onclick="applyPromoCode()">Appliquer</button>
+                </div>
+                <div id="promoCodeResult"></div>
+            </div>
+            <div id="cartSubtotalLine" class="discount-line" style="display: none;">
+                <span>Sous-total:</span>
+                <span id="cartSubtotal">0€</span>
+            </div>
+            <div id="cartDiscountLine" class="discount-line" style="display: none;">
+                <span id="discountLabel">Réduction:</span>
+                <span id="cartDiscount">-0€</span>
+            </div>
             <div class="cart-total">
                 <span class="cart-total-label">Total:</span>
                 <span class="cart-total-amount" id="cartTotal">0€</span>
@@ -4020,20 +4727,58 @@
         function initProducts() {
             renderProducts();
             updateCartUI();
+            updateUserLinks();
+        }
+
+        // Afficher/cacher les liens utilisateur
+        function updateUserLinks() {
+            var token = localStorage.getItem('alphamouv_token');
+            var userLinks = document.querySelectorAll('.user-only');
+            userLinks.forEach(function(link) {
+                link.style.display = token ? 'block' : 'none';
+            });
         }
 
         // Afficher les produits
         function renderProducts() {
             const grid = document.getElementById('productsGrid');
-            grid.innerHTML = filteredProducts.map(product => `
+            const token = localStorage.getItem('alphamouv_token');
+            grid.innerHTML = filteredProducts.map(product => {
+                var stockStatus = '';
+                var stockClass = '';
+                if (product.stock !== undefined) {
+                    if (product.stock <= 0) {
+                        stockStatus = 'Rupture';
+                        stockClass = 'out-of-stock';
+                    } else if (product.stock <= 5) {
+                        stockStatus = 'Stock limité';
+                        stockClass = 'low-stock';
+                    } else {
+                        stockStatus = 'En stock';
+                        stockClass = 'in-stock';
+                    }
+                }
+                return `
                 <div class="product-card" data-category="${product.category}" data-type="${product.type}" data-price="${product.price}" onclick="showProductDetail(${product.id})">
+                    ${token ? `
+                    <button class="product-wishlist-btn" data-product-id="${product.id}" onclick="event.stopPropagation(); toggleWishlist(${product.id});">
+                        <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    </button>
+                    ` : ''}
                     ${product.image
                         ? `<img src="${product.image}" alt="${product.name}" class="product-image">`
                         : `<div class="product-image-placeholder">${product.icon}</div>`
                     }
-                    <div class="product-name-overlay">${product.name}</div>
+                    <div class="product-name-overlay">
+                        ${product.name}
+                        ${stockStatus ? `<div class="stock-indicator ${stockClass}">${stockStatus}</div>` : ''}
+                    </div>
                 </div>
-            `).join('');
+            `}).join('');
+            // Update wishlist buttons state
+            if (token) {
+                updateWishlistButtons();
+            }
         }
 
         // Filtrer les produits
@@ -4552,9 +5297,10 @@
 
                 // Preparer les items pour Stripe
                 const items = cart.map(item => ({
+                    id: item.id,
                     name: item.name,
                     description: item.description || '',
-                    price: item.price,
+                    price: item.prix_promo || item.prix || item.price,
                     quantity: item.quantity,
                     image: item.image
                 }));
@@ -4568,6 +5314,7 @@
                     },
                     body: JSON.stringify({
                         items: items,
+                        promoCode: appliedPromoCode,
                         successUrl: window.location.origin + '/boutique.html?payment=success',
                         cancelUrl: window.location.origin + '/boutique.html?payment=cancel'
                     })
@@ -5569,6 +6316,382 @@
                 loadAppearanceSection();
             } else if (section === 'content') {
                 loadContentSection();
+            } else if (section === 'orders') {
+                loadAdminOrders();
+            } else if (section === 'stats') {
+                loadAdvancedStats();
+            } else if (section === 'promo') {
+                loadPromoCodes();
+            }
+        }
+
+        // ============================================
+        // ADMIN - GESTION DES COMMANDES
+        // ============================================
+
+        var allAdminOrders = [];
+
+        async function loadAdminOrders() {
+            var token = localStorage.getItem('alphamouv_token');
+            if (!token) return;
+
+            try {
+                var response = await fetch('/api/admin/orders', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                allAdminOrders = await response.json();
+                renderAdminOrders(allAdminOrders);
+            } catch (error) {
+                console.error('Erreur chargement commandes admin:', error);
+            }
+        }
+
+        function filterAdminOrders() {
+            var status = document.getElementById('orderStatusFilter').value;
+            if (status === 'all') {
+                renderAdminOrders(allAdminOrders);
+            } else {
+                renderAdminOrders(allAdminOrders.filter(function(o) { return o.status === status; }));
+            }
+        }
+
+        function renderAdminOrders(orders) {
+            var tbody = document.getElementById('adminOrdersBody');
+            var statusLabels = {
+                'pending': 'En attente',
+                'paid': 'Payée',
+                'processing': 'En préparation',
+                'shipped': 'Expédiée',
+                'delivered': 'Livrée',
+                'cancelled': 'Annulée'
+            };
+
+            tbody.innerHTML = orders.map(function(order) {
+                var clientName = order.prenom ? order.prenom + ' ' + (order.nom || '') : order.email;
+                return `
+                    <tr>
+                        <td>#${order.id}</td>
+                        <td>${clientName}</td>
+                        <td>${order.total?.toFixed(2) || 0}€${order.promo_code ? ' <small style="color:#22c55e">(' + order.promo_code + ')</small>' : ''}</td>
+                        <td>${new Date(order.created_at).toLocaleDateString('fr-FR')}</td>
+                        <td>
+                            <select class="status-select" onchange="updateOrderStatus(${order.id}, this.value)">
+                                <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>En attente</option>
+                                <option value="paid" ${order.status === 'paid' ? 'selected' : ''}>Payée</option>
+                                <option value="processing" ${order.status === 'processing' ? 'selected' : ''}>En préparation</option>
+                                <option value="shipped" ${order.status === 'shipped' ? 'selected' : ''}>Expédiée</option>
+                                <option value="delivered" ${order.status === 'delivered' ? 'selected' : ''}>Livrée</option>
+                                <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Annulée</option>
+                            </select>
+                        </td>
+                        <td>
+                            <button onclick="viewOrderDetails(${order.id})" style="padding: 5px 10px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 5px; color: #3b82f6; cursor: pointer;">Détails</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function updateOrderStatus(orderId, status) {
+            var token = localStorage.getItem('alphamouv_token');
+            if (!token) return;
+
+            try {
+                await fetch('/api/admin/orders/' + orderId + '/status', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ status: status })
+                });
+                addLog('Statut commande #' + orderId + ' modifié: ' + status, 'success');
+            } catch (error) {
+                console.error('Erreur mise à jour statut:', error);
+            }
+        }
+
+        function viewOrderDetails(orderId) {
+            var order = allAdminOrders.find(function(o) { return o.id === orderId; });
+            if (!order) return;
+
+            var items = [];
+            try { items = JSON.parse(order.items || '[]'); } catch(e) {}
+
+            showCustomModal({
+                type: 'info',
+                title: 'Commande #' + orderId,
+                message: `
+                    <div style="text-align: left;">
+                        <p><strong>Client:</strong> ${order.prenom || ''} ${order.nom || ''} (${order.email})</p>
+                        <p><strong>Date:</strong> ${new Date(order.created_at).toLocaleString('fr-FR')}</p>
+                        <p><strong>Statut:</strong> ${order.status}</p>
+                        ${order.promo_code ? `<p><strong>Code promo:</strong> ${order.promo_code} (-${order.discount_amount?.toFixed(2) || 0}€)</p>` : ''}
+                        <hr style="border-color: rgba(255,255,255,0.2); margin: 15px 0;">
+                        <p><strong>Articles:</strong></p>
+                        ${items.map(function(item) {
+                            return `<p>- ${item.name} x${item.quantity || 1} (${item.price?.toFixed(2) || 0}€)</p>`;
+                        }).join('')}
+                        <hr style="border-color: rgba(255,255,255,0.2); margin: 15px 0;">
+                        <p><strong>Total:</strong> ${order.total?.toFixed(2) || 0}€</p>
+                    </div>
+                `,
+                buttonText: 'Fermer'
+            });
+        }
+
+        // ============================================
+        // ADMIN - STATISTIQUES AVANCÉES
+        // ============================================
+
+        async function loadAdvancedStats() {
+            var token = localStorage.getItem('alphamouv_token');
+            if (!token) return;
+
+            try {
+                var response = await fetch('/api/admin/stats/advanced', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                var stats = await response.json();
+
+                // Afficher les stats principales
+                document.getElementById('statsGrid').innerHTML = `
+                    <div class="stats-card">
+                        <div class="stats-card-icon">💰</div>
+                        <div class="stats-card-value">${(stats.revenue || 0).toFixed(2)}€</div>
+                        <div class="stats-card-label">Revenue Total</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-icon">📅</div>
+                        <div class="stats-card-value">${(stats.monthRevenue || 0).toFixed(2)}€</div>
+                        <div class="stats-card-label">Ce mois</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-icon">📦</div>
+                        <div class="stats-card-value">${stats.orders || 0}</div>
+                        <div class="stats-card-label">Commandes payées</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-icon">👥</div>
+                        <div class="stats-card-value">${stats.users || 0}</div>
+                        <div class="stats-card-label">Utilisateurs</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-icon">🎁</div>
+                        <div class="stats-card-value">${stats.activePromos || 0}</div>
+                        <div class="stats-card-label">Codes Promo Actifs</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-icon">📧</div>
+                        <div class="stats-card-value">${stats.newsletter || 0}</div>
+                        <div class="stats-card-label">Newsletter</div>
+                    </div>
+                `;
+
+                // Top produits
+                var topProductsList = document.getElementById('topProductsList');
+                if (stats.topProducts && stats.topProducts.length > 0) {
+                    topProductsList.innerHTML = stats.topProducts.map(function(p, i) {
+                        return `
+                            <div class="top-product-item">
+                                <div class="top-product-rank">${i + 1}</div>
+                                <img src="${p.image || 'images/placeholder.png'}" alt="${p.nom}" class="top-product-image">
+                                <span class="top-product-name">${p.nom}</span>
+                                <span class="top-product-sales">${p.total_sold} vendus</span>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    topProductsList.innerHTML = '<p style="color: rgba(255,255,255,0.5);">Aucune vente encore</p>';
+                }
+
+                // Stock faible
+                var lowStockList = document.getElementById('lowStockList');
+                if (stats.lowStock && stats.lowStock.length > 0) {
+                    lowStockList.innerHTML = stats.lowStock.map(function(p) {
+                        return `
+                            <div class="low-stock-item">
+                                <span class="product-name">${p.nom}</span>
+                                <span class="stock-count">${p.stock} en stock</span>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    lowStockList.innerHTML = '<p style="color: rgba(255,255,255,0.5);">Tous les stocks sont OK</p>';
+                }
+
+                // Dernières commandes
+                var recentOrdersBody = document.getElementById('recentOrdersBody');
+                if (stats.recentOrders && stats.recentOrders.length > 0) {
+                    recentOrdersBody.innerHTML = stats.recentOrders.map(function(order) {
+                        var clientName = order.prenom ? order.prenom + ' ' + (order.nom || '') : order.email;
+                        return `
+                            <tr>
+                                <td>#${order.id}</td>
+                                <td>${clientName}</td>
+                                <td>${order.total?.toFixed(2) || 0}€</td>
+                                <td><span class="order-status ${order.status}">${order.status}</span></td>
+                                <td>${new Date(order.created_at).toLocaleDateString('fr-FR')}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            } catch (error) {
+                console.error('Erreur chargement stats:', error);
+            }
+        }
+
+        // ============================================
+        // ADMIN - CODES PROMO
+        // ============================================
+
+        async function loadPromoCodes() {
+            var token = localStorage.getItem('alphamouv_token');
+            if (!token) return;
+
+            try {
+                var response = await fetch('/api/admin/promo', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                var promos = await response.json();
+                renderPromoCodes(promos);
+            } catch (error) {
+                console.error('Erreur chargement codes promo:', error);
+            }
+        }
+
+        function renderPromoCodes(promos) {
+            var tbody = document.getElementById('promoCodesBody');
+            tbody.innerHTML = promos.map(function(promo) {
+                var expiry = promo.expires_at ? new Date(promo.expires_at).toLocaleDateString('fr-FR') : '-';
+                var usesText = promo.max_uses ? promo.used_count + '/' + promo.max_uses : promo.used_count + '/∞';
+                return `
+                    <tr>
+                        <td><strong>${promo.code}</strong></td>
+                        <td>${promo.discount_percent}%</td>
+                        <td>${usesText}</td>
+                        <td>${promo.min_order_amount || 0}€</td>
+                        <td>${expiry}</td>
+                        <td><span class="promo-status ${promo.active ? 'active' : 'inactive'}">${promo.active ? 'Actif' : 'Inactif'}</span></td>
+                        <td>
+                            <button onclick="togglePromoStatus(${promo.id}, ${!promo.active})" style="padding: 5px 10px; background: rgba(234, 179, 8, 0.2); border: 1px solid rgba(234, 179, 8, 0.4); border-radius: 5px; color: #eab308; cursor: pointer; margin-right: 5px;">
+                                ${promo.active ? 'Désactiver' : 'Activer'}
+                            </button>
+                            <button onclick="deletePromoCode(${promo.id})" style="padding: 5px 10px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 5px; color: #ef4444; cursor: pointer;">
+                                Supprimer
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function createPromoCode() {
+            var token = localStorage.getItem('alphamouv_token');
+            if (!token) return;
+
+            var code = document.getElementById('promoCode').value.trim();
+            var percent = parseInt(document.getElementById('promoPercent').value);
+            var maxUses = document.getElementById('promoMaxUses').value;
+            var minOrder = document.getElementById('promoMinOrder').value;
+            var expires = document.getElementById('promoExpires').value;
+
+            if (!code || !percent) {
+                showCustomModal({
+                    type: 'warning',
+                    title: 'Champs requis',
+                    message: 'Le code et le pourcentage sont obligatoires.',
+                    buttonText: 'OK'
+                });
+                return;
+            }
+
+            try {
+                var response = await fetch('/api/admin/promo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({
+                        code: code,
+                        discount_percent: percent,
+                        max_uses: maxUses ? parseInt(maxUses) : null,
+                        min_order_amount: minOrder ? parseFloat(minOrder) : 0,
+                        expires_at: expires || null
+                    })
+                });
+
+                if (response.ok) {
+                    document.getElementById('promoCode').value = '';
+                    document.getElementById('promoPercent').value = '';
+                    document.getElementById('promoMaxUses').value = '';
+                    document.getElementById('promoMinOrder').value = '';
+                    document.getElementById('promoExpires').value = '';
+                    loadPromoCodes();
+                    addLog('Code promo créé: ' + code, 'success');
+                    showCustomModal({
+                        type: 'success',
+                        title: 'Code créé',
+                        message: 'Le code promo ' + code + ' a été créé avec succès.',
+                        buttonText: 'OK'
+                    });
+                } else {
+                    var error = await response.json();
+                    showCustomModal({
+                        type: 'error',
+                        title: 'Erreur',
+                        message: error.error || 'Erreur lors de la création du code.',
+                        buttonText: 'OK'
+                    });
+                }
+            } catch (error) {
+                console.error('Erreur création code promo:', error);
+            }
+        }
+
+        async function togglePromoStatus(promoId, active) {
+            var token = localStorage.getItem('alphamouv_token');
+            if (!token) return;
+
+            try {
+                await fetch('/api/admin/promo/' + promoId, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ active: active, discount_percent: 0 }) // Will need to fetch current values
+                });
+                loadPromoCodes();
+            } catch (error) {
+                console.error('Erreur toggle promo:', error);
+            }
+        }
+
+        async function deletePromoCode(promoId) {
+            var confirmed = await showCustomModal({
+                type: 'confirm',
+                title: 'Supprimer le code promo ?',
+                message: 'Cette action est irréversible.',
+                confirmText: 'Supprimer',
+                cancelText: 'Annuler'
+            });
+
+            if (!confirmed) return;
+
+            var token = localStorage.getItem('alphamouv_token');
+            if (!token) return;
+
+            try {
+                await fetch('/api/admin/promo/' + promoId, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                loadPromoCodes();
+                addLog('Code promo supprimé', 'warning');
+            } catch (error) {
+                console.error('Erreur suppression promo:', error);
             }
         }
 
@@ -6428,6 +7551,331 @@
             document.body.style.overflow = '';
         }
 
+        // Ouvrir/Fermer le modal Mes Commandes
+        function openOrdersModal() {
+            document.getElementById('ordersModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            loadUserOrders();
+        }
+
+        function closeOrdersModal() {
+            document.getElementById('ordersModal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Ouvrir/Fermer le modal Wishlist
+        function openWishlistModal() {
+            document.getElementById('wishlistModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            loadWishlist();
+        }
+
+        function closeWishlistModal() {
+            document.getElementById('wishlistModal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Charger les commandes de l'utilisateur
+        async function loadUserOrders() {
+            var token = localStorage.getItem('alphamouv_token');
+            if (!token) {
+                document.getElementById('ordersContent').innerHTML = '';
+                document.getElementById('ordersEmpty').style.display = 'block';
+                document.getElementById('ordersEmpty').innerHTML = `
+                    <div style="font-size: 4em; margin-bottom: 20px;">🔒</div>
+                    <p style="font-size: 1.2em; margin-bottom: 10px;">Connectez-vous pour voir vos commandes</p>
+                `;
+                return;
+            }
+
+            try {
+                var response = await fetch('/api/orders', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                var orders = await response.json();
+
+                var ordersContent = document.getElementById('ordersContent');
+                var ordersEmpty = document.getElementById('ordersEmpty');
+
+                if (!orders || orders.length === 0) {
+                    ordersContent.innerHTML = '';
+                    ordersEmpty.style.display = 'block';
+                    return;
+                }
+
+                ordersEmpty.style.display = 'none';
+                ordersContent.innerHTML = orders.map(function(order) {
+                    var items = [];
+                    try { items = JSON.parse(order.items || '[]'); } catch(e) {}
+                    var statusLabels = {
+                        'pending': 'En attente',
+                        'paid': 'Payée',
+                        'processing': 'En préparation',
+                        'shipped': 'Expédiée',
+                        'delivered': 'Livrée',
+                        'cancelled': 'Annulée'
+                    };
+
+                    return `
+                        <div class="order-card">
+                            <div class="order-header">
+                                <div>
+                                    <span class="order-number">Commande #${order.id}</span>
+                                    <span class="order-date">${new Date(order.created_at).toLocaleDateString('fr-FR')}</span>
+                                </div>
+                                <span class="order-status ${order.status}">${statusLabels[order.status] || order.status}</span>
+                            </div>
+                            <div class="order-items">
+                                ${items.map(function(item) {
+                                    return `
+                                        <div class="order-item">
+                                            <img src="${item.image || 'images/placeholder.png'}" alt="${item.name}" class="order-item-image">
+                                            <div class="order-item-info">
+                                                <div class="order-item-name">${item.name}</div>
+                                                <div class="order-item-details">Qté: ${item.quantity || 1} - ${item.price?.toFixed(2) || 0}€</div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                            ${order.discount_amount > 0 ? `
+                                <div style="color: #22c55e; margin-bottom: 10px;">
+                                    Réduction (${order.promo_code}): -${order.discount_amount.toFixed(2)}€
+                                </div>
+                            ` : ''}
+                            <div class="order-total">Total: ${order.total?.toFixed(2) || 0}€</div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Erreur chargement commandes:', error);
+            }
+        }
+
+        // Charger la wishlist
+        async function loadWishlist() {
+            var token = localStorage.getItem('alphamouv_token');
+            if (!token) {
+                document.getElementById('wishlistContent').innerHTML = '';
+                document.getElementById('wishlistEmpty').style.display = 'block';
+                document.getElementById('wishlistEmpty').innerHTML = `
+                    <div style="font-size: 4em; margin-bottom: 20px;">🔒</div>
+                    <p style="font-size: 1.2em; margin-bottom: 10px;">Connectez-vous pour voir votre wishlist</p>
+                `;
+                return;
+            }
+
+            try {
+                var response = await fetch('/api/wishlist', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                var wishlist = await response.json();
+
+                var wishlistContent = document.getElementById('wishlistContent');
+                var wishlistEmpty = document.getElementById('wishlistEmpty');
+
+                if (!wishlist || wishlist.length === 0) {
+                    wishlistContent.innerHTML = '';
+                    wishlistEmpty.style.display = 'block';
+                    return;
+                }
+
+                wishlistEmpty.style.display = 'none';
+                wishlistContent.innerHTML = wishlist.map(function(item) {
+                    var image = item.image || (item.images && item.images[0]) || 'images/placeholder.png';
+                    var price = item.prix_promo || item.prix;
+                    return `
+                        <div class="wishlist-card">
+                            <img src="${image}" alt="${item.nom}" class="wishlist-card-image">
+                            <div class="wishlist-card-content">
+                                <h3 class="wishlist-card-name">${item.nom}</h3>
+                                <div class="wishlist-card-price">${price?.toFixed(2) || 0}€</div>
+                                <div class="wishlist-card-actions">
+                                    <button class="wishlist-btn wishlist-btn-cart" onclick="addWishlistToCart(${item.product_id})">Ajouter au panier</button>
+                                    <button class="wishlist-btn wishlist-btn-remove" onclick="removeFromWishlist(${item.product_id})">Retirer</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Erreur chargement wishlist:', error);
+            }
+        }
+
+        // Ajouter à la wishlist
+        async function addToWishlist(productId) {
+            var token = localStorage.getItem('alphamouv_token');
+            if (!token) {
+                showCustomModal({
+                    type: 'warning',
+                    title: 'Connexion requise',
+                    message: 'Veuillez vous connecter pour ajouter des produits à votre wishlist.',
+                    buttonText: 'OK'
+                });
+                return;
+            }
+
+            try {
+                var response = await fetch('/api/wishlist', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ product_id: productId })
+                });
+
+                if (response.ok) {
+                    updateWishlistButtons();
+                    showCustomModal({
+                        type: 'success',
+                        title: 'Ajouté',
+                        message: 'Produit ajouté à votre wishlist',
+                        buttonText: 'OK'
+                    });
+                }
+            } catch (error) {
+                console.error('Erreur ajout wishlist:', error);
+            }
+        }
+
+        // Retirer de la wishlist
+        async function removeFromWishlist(productId) {
+            var token = localStorage.getItem('alphamouv_token');
+            if (!token) return;
+
+            try {
+                await fetch('/api/wishlist/' + productId, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                updateWishlistButtons();
+                loadWishlist();
+            } catch (error) {
+                console.error('Erreur suppression wishlist:', error);
+            }
+        }
+
+        // Ajouter au panier depuis la wishlist
+        function addWishlistToCart(productId) {
+            var products = JSON.parse(localStorage.getItem('alphamouv_products')) || [];
+            var product = products.find(function(p) { return p.id === productId; });
+            if (product) {
+                addToCart(product);
+                removeFromWishlist(productId);
+            }
+        }
+
+        // Toggle wishlist
+        async function toggleWishlist(productId) {
+            var token = localStorage.getItem('alphamouv_token');
+            if (!token) {
+                showCustomModal({
+                    type: 'warning',
+                    title: 'Connexion requise',
+                    message: 'Veuillez vous connecter pour ajouter des produits à votre wishlist.',
+                    buttonText: 'OK'
+                });
+                return;
+            }
+
+            var btn = document.querySelector('.product-wishlist-btn[data-product-id="' + productId + '"]');
+            if (btn && btn.classList.contains('active')) {
+                await removeFromWishlist(productId);
+            } else {
+                await addToWishlist(productId);
+            }
+        }
+
+        // Mettre à jour les boutons wishlist
+        async function updateWishlistButtons() {
+            var token = localStorage.getItem('alphamouv_token');
+            if (!token) return;
+
+            try {
+                var response = await fetch('/api/wishlist', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                var wishlist = await response.json();
+                var wishlistIds = wishlist.map(function(item) { return item.product_id; });
+
+                document.querySelectorAll('.product-wishlist-btn').forEach(function(btn) {
+                    var productId = parseInt(btn.dataset.productId);
+                    if (wishlistIds.includes(productId)) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+            } catch (error) {
+                console.error('Erreur mise à jour wishlist buttons:', error);
+            }
+        }
+
+        // Code promo dans le panier
+        var appliedPromoCode = null;
+        var promoDiscount = 0;
+
+        async function applyPromoCode() {
+            var code = document.getElementById('cartPromoCode').value.trim();
+            if (!code) return;
+
+            var token = localStorage.getItem('alphamouv_token');
+            if (!token) {
+                document.getElementById('promoCodeResult').innerHTML = '<div class="promo-code-error">Connectez-vous pour utiliser un code promo</div>';
+                return;
+            }
+
+            var cart = JSON.parse(localStorage.getItem('alphamouv_cart')) || [];
+            var subtotal = cart.reduce(function(sum, item) {
+                return sum + ((item.prix_promo || item.prix) * (item.quantity || 1));
+            }, 0);
+
+            try {
+                var response = await fetch('/api/promo/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ code: code, orderTotal: subtotal })
+                });
+
+                var result = await response.json();
+
+                if (response.ok && result.valid) {
+                    appliedPromoCode = result.code;
+                    promoDiscount = result.discount_amount;
+
+                    document.getElementById('promoCodeResult').innerHTML = `
+                        <div class="promo-code-success">
+                            Code ${result.code} appliqué: -${result.discount_percent}%
+                        </div>
+                    `;
+
+                    document.getElementById('cartSubtotalLine').style.display = 'flex';
+                    document.getElementById('cartSubtotal').textContent = subtotal.toFixed(2) + '€';
+                    document.getElementById('cartDiscountLine').style.display = 'flex';
+                    document.getElementById('discountLabel').textContent = 'Réduction (' + result.code + '):';
+                    document.getElementById('cartDiscount').textContent = '-' + result.discount_amount.toFixed(2) + '€';
+                    document.getElementById('cartTotal').textContent = result.new_total.toFixed(2) + '€';
+                } else {
+                    document.getElementById('promoCodeResult').innerHTML = `
+                        <div class="promo-code-error">${result.error || 'Code invalide'}</div>
+                    `;
+                    appliedPromoCode = null;
+                    promoDiscount = 0;
+                    document.getElementById('cartSubtotalLine').style.display = 'none';
+                    document.getElementById('cartDiscountLine').style.display = 'none';
+                    updateCartTotal();
+                }
+            } catch (error) {
+                console.error('Erreur vérification code promo:', error);
+                document.getElementById('promoCodeResult').innerHTML = '<div class="promo-code-error">Erreur de vérification</div>';
+            }
+        }
+
         // Charger les collections (regroupement par type/catégorie)
         function loadCollections() {
             var products = JSON.parse(localStorage.getItem('alphamouv_products')) || [];
@@ -6603,6 +8051,12 @@
         });
         document.getElementById('aboutModal').addEventListener('click', function(e) {
             if (e.target === this) closeAboutModal();
+        });
+        document.getElementById('ordersModal').addEventListener('click', function(e) {
+            if (e.target === this) closeOrdersModal();
+        });
+        document.getElementById('wishlistModal').addEventListener('click', function(e) {
+            if (e.target === this) closeWishlistModal();
         });
     </script>
 </body>

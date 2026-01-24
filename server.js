@@ -12,9 +12,52 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const fs = require('fs');
 const cloudinary = require('cloudinary').v2;
+const crypto = require('crypto');
 
 // ==================== SECURITE ====================
 const helmet = require('helmet');
+
+// ==================== CHIFFREMENT DES DONNEES ====================
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || crypto.createHash('sha256').update(process.env.JWT_SECRET || 'alphamouv_default_key_2024').digest();
+const IV_LENGTH = 16;
+
+// Chiffrer une donnee sensible
+function encryptData(text) {
+    if (!text) return text;
+    try {
+        const iv = crypto.randomBytes(IV_LENGTH);
+        const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
+        let encrypted = cipher.update(text, 'utf8', 'hex');
+        encrypted += cipher.final('hex');
+        return iv.toString('hex') + ':' + encrypted;
+    } catch (error) {
+        console.error('Erreur chiffrement:', error);
+        return text;
+    }
+}
+
+// Dechiffrer une donnee sensible
+function decryptData(encryptedText) {
+    if (!encryptedText || !encryptedText.includes(':')) return encryptedText;
+    try {
+        const parts = encryptedText.split(':');
+        const iv = Buffer.from(parts[0], 'hex');
+        const encrypted = parts[1];
+        const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
+        let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+        decrypted += decipher.final('utf8');
+        return decrypted;
+    } catch (error) {
+        // Retourner la valeur originale si echec (donnees non chiffrees)
+        return encryptedText;
+    }
+}
+
+// Verifier si une donnee est chiffree
+function isEncrypted(text) {
+    if (!text || typeof text !== 'string') return false;
+    return text.includes(':') && /^[a-f0-9]{32}:/.test(text);
+}
 const rateLimit = require('express-rate-limit');
 
 // Rate limiters pour differentes routes
@@ -167,6 +210,15 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'alphamouv_secret_2024';
 
 // ==================== CONFIGURATION ====================
+
+// Middleware pour forcer HTTPS en production (Render)
+app.use((req, res, next) => {
+    // Render utilise le header x-forwarded-proto pour indiquer HTTPS
+    if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] !== 'https') {
+        return res.redirect(301, `https://${req.headers.host}${req.url}`);
+    }
+    next();
+});
 
 // Middleware de securite
 app.use(helmet({
@@ -439,6 +491,7 @@ async function initDatabase() {
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@alphamouv.com';
     const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
     const hashedPassword = bcrypt.hashSync(adminPassword, 10);
+    const encryptedAdminEmail = encryptData(adminEmail);
 
     const adminResult = db.exec("SELECT id FROM users WHERE role = 'admin'");
     if (adminResult.length === 0 || adminResult[0].values.length === 0) {
@@ -446,17 +499,76 @@ async function initDatabase() {
         db.run(`
             INSERT INTO users (email, password, nom, prenom, role)
             VALUES (?, ?, ?, ?, ?)
-        `, [adminEmail, hashedPassword, 'Admin', 'AlphaMouv', 'admin']);
+        `, [encryptedAdminEmail, hashedPassword, 'Admin', 'AlphaMouv', 'admin']);
         console.log('Admin cree');
     } else {
         // Mettre a jour l'email et mot de passe admin
         db.run(`
             UPDATE users SET email = ?, password = ? WHERE role = 'admin'
-        `, [adminEmail, hashedPassword]);
+        `, [encryptedAdminEmail, hashedPassword]);
         console.log('Admin mis a jour');
     }
 
+    // Migration: chiffrer les donnees existantes non chiffrees
+    await migrateEncryption();
+
     saveDatabase();
+}
+
+// Migration pour chiffrer les donnees existantes
+async function migrateEncryption() {
+    console.log('Verification du chiffrement des donnees...');
+
+    // Migrer les utilisateurs
+    const users = dbAll('SELECT id, email, adresse, telephone FROM users');
+    let usersMigrated = 0;
+    for (const user of users) {
+        let needsUpdate = false;
+        const updates = {};
+
+        if (user.email && !isEncrypted(user.email)) {
+            updates.email = encryptData(user.email);
+            needsUpdate = true;
+        }
+        if (user.adresse && !isEncrypted(user.adresse)) {
+            updates.adresse = encryptData(user.adresse);
+            needsUpdate = true;
+        }
+        if (user.telephone && !isEncrypted(user.telephone)) {
+            updates.telephone = encryptData(user.telephone);
+            needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+            db.run(`
+                UPDATE users SET
+                    email = COALESCE(?, email),
+                    adresse = COALESCE(?, adresse),
+                    telephone = COALESCE(?, telephone)
+                WHERE id = ?
+            `, [updates.email || null, updates.adresse || null, updates.telephone || null, user.id]);
+            usersMigrated++;
+        }
+    }
+    if (usersMigrated > 0) {
+        console.log(`Migration: ${usersMigrated} utilisateur(s) chiffre(s)`);
+    }
+
+    // Migrer la newsletter
+    const subscribers = dbAll('SELECT id, email FROM newsletter');
+    let newsletterMigrated = 0;
+    for (const sub of subscribers) {
+        if (sub.email && !isEncrypted(sub.email)) {
+            const encryptedEmail = encryptData(sub.email);
+            db.run('UPDATE newsletter SET email = ? WHERE id = ?', [encryptedEmail, sub.id]);
+            newsletterMigrated++;
+        }
+    }
+    if (newsletterMigrated > 0) {
+        console.log(`Migration: ${newsletterMigrated} email(s) newsletter chiffre(s)`);
+    }
+
+    console.log('Chiffrement des donnees verifie');
 }
 
 function saveDatabase() {
@@ -557,16 +669,21 @@ app.post('/api/auth/google', authLimiter, async (req, res) => {
         const nom = googleUser.family_name || '';
         const prenom = googleUser.given_name || googleUser.name || '';
 
-        // Chercher ou creer l'utilisateur
-        let user = dbGet('SELECT * FROM users WHERE email = ?', [email]);
+        // Chercher l'utilisateur avec email chiffre ou non
+        const allUsers = dbAll('SELECT * FROM users');
+        let user = allUsers.find(u => {
+            const decryptedEmail = decryptData(u.email);
+            return decryptedEmail === email || u.email === email;
+        });
 
         if (!user) {
-            // Creer un nouvel utilisateur Google
+            // Creer un nouvel utilisateur Google avec email chiffre
             const randomPassword = bcrypt.hashSync(Math.random().toString(36), 10);
+            const encryptedEmail = encryptData(email);
             const result = dbRun(`
                 INSERT INTO users (email, password, nom, prenom, role, auth_provider)
                 VALUES (?, ?, ?, ?, ?, ?)
-            `, [email, randomPassword, nom, prenom, 'user', 'google']);
+            `, [encryptedEmail, randomPassword, nom, prenom, 'user', 'google']);
 
             user = {
                 id: result.lastID,
@@ -578,9 +695,12 @@ app.post('/api/auth/google', authLimiter, async (req, res) => {
             };
         }
 
+        // Dechiffrer l'email pour le token
+        const decryptedEmail = user.email ? decryptData(user.email) : email;
+
         // Generer le token JWT
         const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role },
+            { id: user.id, email: decryptedEmail, role: user.role },
             JWT_SECRET,
             { expiresIn: '7d' }
         );
@@ -590,7 +710,7 @@ app.post('/api/auth/google', authLimiter, async (req, res) => {
             token,
             user: {
                 id: user.id,
-                email: user.email,
+                email: decryptedEmail,
                 nom: user.nom,
                 prenom: user.prenom,
                 role: user.role
@@ -606,17 +726,28 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
     try {
         const { email, password, nom, prenom, adresse, code_postal, ville, telephone } = req.body;
 
-        const existingUser = dbGet('SELECT id FROM users WHERE email = ?', [email]);
+        // Rechercher avec email chiffre ou non (pour compatibilite)
+        const allUsers = dbAll('SELECT id, email FROM users');
+        const existingUser = allUsers.find(u => {
+            const decryptedEmail = decryptData(u.email);
+            return decryptedEmail === email || u.email === email;
+        });
+
         if (existingUser) {
             return res.status(400).json({ error: 'Cet email est deja utilise' });
         }
 
         const hashedPassword = bcrypt.hashSync(password, 10);
 
+        // Chiffrer les donnees sensibles
+        const encryptedEmail = encryptData(email);
+        const encryptedAdresse = adresse ? encryptData(adresse) : null;
+        const encryptedTelephone = telephone ? encryptData(telephone) : null;
+
         const result = dbRun(`
             INSERT INTO users (email, password, nom, prenom, adresse, code_postal, ville, telephone)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `, [email, hashedPassword, nom, prenom, adresse, code_postal, ville, telephone]);
+        `, [encryptedEmail, hashedPassword, nom, prenom, encryptedAdresse, code_postal, ville, encryptedTelephone]);
 
         const token = jwt.sign(
             { id: result.lastID, email, role: 'user' },
@@ -640,7 +771,13 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const user = dbGet('SELECT * FROM users WHERE email = ?', [email]);
+        // Rechercher l'utilisateur avec email chiffre ou non
+        const allUsers = dbAll('SELECT * FROM users');
+        const user = allUsers.find(u => {
+            const decryptedEmail = decryptData(u.email);
+            return decryptedEmail === email || u.email === email;
+        });
+
         if (!user) {
             return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
         }
@@ -650,8 +787,11 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
             return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
         }
 
+        // Dechiffrer l'email pour le token et la reponse
+        const decryptedEmail = decryptData(user.email);
+
         const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role },
+            { id: user.id, email: decryptedEmail, role: user.role },
             JWT_SECRET,
             { expiresIn: '7d' }
         );
@@ -661,14 +801,14 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
             token,
             user: {
                 id: user.id,
-                email: user.email,
+                email: decryptedEmail,
                 nom: user.nom,
                 prenom: user.prenom,
                 role: user.role,
-                adresse: user.adresse,
+                adresse: decryptData(user.adresse),
                 code_postal: user.code_postal,
                 ville: user.ville,
-                telephone: user.telephone
+                telephone: decryptData(user.telephone)
             }
         });
     } catch (error) {
@@ -683,7 +823,13 @@ app.get('/api/auth/profile', authenticateToken, (req, res) => {
         if (!user) {
             return res.status(404).json({ error: 'Utilisateur non trouve' });
         }
-        res.json(user);
+        // Dechiffrer les donnees sensibles
+        res.json({
+            ...user,
+            email: decryptData(user.email),
+            adresse: decryptData(user.adresse),
+            telephone: decryptData(user.telephone)
+        });
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
     }
@@ -693,10 +839,14 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
     try {
         const { nom, prenom, adresse, code_postal, ville, telephone } = req.body;
 
+        // Chiffrer les donnees sensibles
+        const encryptedAdresse = adresse ? encryptData(adresse) : null;
+        const encryptedTelephone = telephone ? encryptData(telephone) : null;
+
         dbRun(`
             UPDATE users SET nom = ?, prenom = ?, adresse = ?, code_postal = ?, ville = ?, telephone = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
-        `, [nom, prenom, adresse, code_postal, ville, telephone, req.user.id]);
+        `, [nom, prenom, encryptedAdresse, code_postal, ville, encryptedTelephone, req.user.id]);
 
         res.json({ success: true, message: 'Profil mis a jour' });
     } catch (error) {
@@ -831,8 +981,10 @@ app.get('/api/admin/orders', authenticateToken, isAdmin, (req, res) => {
             LEFT JOIN users u ON o.user_id = u.id
             ORDER BY o.created_at DESC
         `);
+        // Dechiffrer les emails utilisateurs
         res.json(orders.map(o => ({
             ...o,
+            email: decryptData(o.email),
             items: JSON.parse(o.items || '[]')
         })));
     } catch (error) {
@@ -856,12 +1008,20 @@ app.post('/api/newsletter', (req, res) => {
     try {
         const { email } = req.body;
 
-        const existing = dbGet('SELECT id FROM newsletter WHERE email = ?', [email]);
+        // Verifier si l'email existe deja (chiffre ou non)
+        const allSubscribers = dbAll('SELECT id, email FROM newsletter');
+        const existing = allSubscribers.find(s => {
+            const decryptedEmail = decryptData(s.email);
+            return decryptedEmail === email || s.email === email;
+        });
+
         if (existing) {
             return res.status(400).json({ error: 'Cet email est deja inscrit' });
         }
 
-        dbRun('INSERT INTO newsletter (email) VALUES (?)', [email]);
+        // Chiffrer l'email avant stockage
+        const encryptedEmail = encryptData(email);
+        dbRun('INSERT INTO newsletter (email) VALUES (?)', [encryptedEmail]);
         res.json({ success: true, message: 'Inscription reussie a la newsletter' });
     } catch (error) {
         res.status(500).json({ error: 'Erreur lors de l\'inscription' });
@@ -871,7 +1031,11 @@ app.post('/api/newsletter', (req, res) => {
 app.get('/api/admin/newsletter', authenticateToken, isAdmin, (req, res) => {
     try {
         const subscribers = dbAll('SELECT * FROM newsletter WHERE actif = 1 ORDER BY created_at DESC');
-        res.json(subscribers);
+        // Dechiffrer les emails pour l'affichage admin
+        res.json((subscribers || []).map(s => ({
+            ...s,
+            email: decryptData(s.email)
+        })));
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
     }
@@ -1188,10 +1352,11 @@ app.get('/api/payment/status/:sessionId', authenticateToken, async (req, res) =>
                 // Envoyer l'email de confirmation
                 const user = dbGet('SELECT * FROM users WHERE id = ?', [order.user_id]);
                 if (user) {
-                    const customerName = user.prenom ? `${user.prenom} ${user.nom || ''}`.trim() : user.email;
+                    const decryptedEmail = decryptData(user.email);
+                    const customerName = user.prenom ? `${user.prenom} ${user.nom || ''}`.trim() : decryptedEmail;
                     await sendOrderConfirmationEmail(
                         { ...order, status: 'paid' },
-                        user.email,
+                        decryptedEmail,
                         customerName
                     );
                 }
@@ -1230,7 +1395,11 @@ app.get('/api/admin/orders', authenticateToken, isAdmin, (req, res) => {
             LEFT JOIN users u ON o.user_id = u.id
             ORDER BY o.created_at DESC
         `);
-        res.json(orders);
+        // Dechiffrer les emails utilisateurs
+        res.json(orders.map(o => ({
+            ...o,
+            email: decryptData(o.email)
+        })));
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
     }
@@ -1303,7 +1472,11 @@ app.get('/api/admin/stats', authenticateToken, isAdmin, (req, res) => {
 app.get('/api/admin/users', authenticateToken, isAdmin, (req, res) => {
     try {
         const users = dbAll('SELECT id, email, nom, prenom, role, created_at FROM users ORDER BY created_at DESC');
-        res.json(users || []);
+        // Dechiffrer les emails pour l'affichage admin
+        res.json((users || []).map(u => ({
+            ...u,
+            email: decryptData(u.email)
+        })));
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
     }
@@ -1562,13 +1735,18 @@ app.get('/api/admin/stats/advanced', authenticateToken, isAdmin, (req, res) => {
         `);
 
         // Dernieres commandes
-        const recentOrders = dbAll(`
+        const recentOrdersRaw = dbAll(`
             SELECT o.id, o.total, o.status, o.created_at, u.email, u.prenom, u.nom
             FROM orders o
             LEFT JOIN users u ON o.user_id = u.id
             ORDER BY o.created_at DESC
             LIMIT 10
         `);
+        // Dechiffrer les emails
+        const recentOrders = recentOrdersRaw.map(o => ({
+            ...o,
+            email: decryptData(o.email)
+        }));
 
         // Stats par statut de commande
         const ordersByStatus = dbAll(`

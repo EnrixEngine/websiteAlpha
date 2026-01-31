@@ -498,6 +498,20 @@ async function initDatabase() {
         console.log('Migration users: ', e.message);
     }
 
+    // Migration: ajouter colonne video aux posts Instagram
+    try {
+        const instaTableInfo = db.exec("PRAGMA table_info(instagram_posts)");
+        if (instaTableInfo.length > 0) {
+            const instaColumns = instaTableInfo[0].values.map(col => col[1]);
+            if (!instaColumns.includes('video')) {
+                db.run('ALTER TABLE instagram_posts ADD COLUMN video TEXT DEFAULT ""');
+                console.log('Migration: colonne video ajoutee aux posts Instagram');
+            }
+        }
+    } catch (e) {
+        console.log('Migration instagram_posts: ', e.message);
+    }
+
     // Creer ou mettre a jour admin par defaut
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@alphamouv.com';
     const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
@@ -1457,27 +1471,36 @@ app.get('/api/instagram-posts', (req, res) => {
 });
 
 // Ajouter un post Instagram (admin)
-app.post('/api/instagram-posts', authenticateToken, isAdmin, upload.single('image'), (req, res) => {
+var instaUpload = upload.fields([{ name: 'image', maxCount: 1 }, { name: 'video', maxCount: 1 }]);
+
+app.post('/api/instagram-posts', authenticateToken, isAdmin, instaUpload, (req, res) => {
     try {
         const { instagram_url, caption } = req.body;
 
         if (!instagram_url) {
             return res.status(400).json({ error: 'URL Instagram requise' });
         }
-        if (!req.file) {
+        if (!req.files || !req.files.image) {
             return res.status(400).json({ error: 'Image requise' });
         }
 
-        // Convertir l'image en base64 pour stockage en DB
-        const b64 = Buffer.from(req.file.buffer).toString('base64');
-        const imageData = 'data:' + req.file.mimetype + ';base64,' + b64;
+        // Image en base64
+        const imgFile = req.files.image[0];
+        const imageData = 'data:' + imgFile.mimetype + ';base64,' + Buffer.from(imgFile.buffer).toString('base64');
+
+        // Video en base64 (optionnel)
+        let videoData = '';
+        if (req.files.video && req.files.video[0]) {
+            const vidFile = req.files.video[0];
+            videoData = 'data:' + vidFile.mimetype + ';base64,' + Buffer.from(vidFile.buffer).toString('base64');
+        }
 
         const maxPos = dbGet('SELECT MAX(position) as maxPos FROM instagram_posts');
         const nextPos = (maxPos && maxPos.maxPos != null) ? maxPos.maxPos + 1 : 0;
 
         const result = dbRun(
-            'INSERT INTO instagram_posts (instagram_url, image, caption, position) VALUES (?, ?, ?, ?)',
-            [instagram_url, imageData, caption || '', nextPos]
+            'INSERT INTO instagram_posts (instagram_url, image, video, caption, position) VALUES (?, ?, ?, ?, ?)',
+            [instagram_url, imageData, videoData, caption || '', nextPos]
         );
 
         res.json({ success: true, id: result.lastID });
@@ -1488,20 +1511,36 @@ app.post('/api/instagram-posts', authenticateToken, isAdmin, upload.single('imag
 });
 
 // Modifier un post Instagram (admin)
-app.put('/api/instagram-posts/:id', authenticateToken, isAdmin, upload.single('image'), (req, res) => {
+app.put('/api/instagram-posts/:id', authenticateToken, isAdmin, instaUpload, (req, res) => {
     try {
         const { instagram_url, caption } = req.body;
         const postId = req.params.id;
 
-        if (req.file) {
-            const b64 = Buffer.from(req.file.buffer).toString('base64');
-            const imageData = 'data:' + req.file.mimetype + ';base64,' + b64;
-            dbRun('UPDATE instagram_posts SET instagram_url = ?, image = ?, caption = ? WHERE id = ?',
-                [instagram_url, imageData, caption || '', postId]);
-        } else {
-            dbRun('UPDATE instagram_posts SET instagram_url = ?, caption = ? WHERE id = ?',
-                [instagram_url, caption || '', postId]);
+        let updates = ['instagram_url = ?', 'caption = ?'];
+        let params = [instagram_url, caption || ''];
+
+        if (req.files && req.files.image && req.files.image[0]) {
+            const imgFile = req.files.image[0];
+            const imageData = 'data:' + imgFile.mimetype + ';base64,' + Buffer.from(imgFile.buffer).toString('base64');
+            updates.push('image = ?');
+            params.push(imageData);
         }
+
+        if (req.files && req.files.video && req.files.video[0]) {
+            const vidFile = req.files.video[0];
+            const videoData = 'data:' + vidFile.mimetype + ';base64,' + Buffer.from(vidFile.buffer).toString('base64');
+            updates.push('video = ?');
+            params.push(videoData);
+        }
+
+        // Si remove_video est envoye, supprimer la video
+        if (req.body.remove_video === 'true') {
+            updates.push('video = ?');
+            params.push('');
+        }
+
+        params.push(postId);
+        dbRun('UPDATE instagram_posts SET ' + updates.join(', ') + ' WHERE id = ?', params);
 
         res.json({ success: true });
     } catch (error) {

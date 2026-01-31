@@ -16194,7 +16194,7 @@
                             if (isAdmin) {
                                 editInstagramPost(post.id);
                             } else {
-                                window.open(post.instagram_url, '_blank');
+                                openInstagramPopupEmbed({ instagramUrl: post.instagram_url });
                             }
                         });
 

@@ -7815,6 +7815,26 @@
                 </div>
             </div>
 
+            <!-- Article à la une -->
+            <div class="blog-featured" onclick="navigateToSection('creations', 'card1')">
+                <div class="blog-featured-inner">
+                    <div class="featured-image">
+                        <img src="images/1000007798.jpg" alt="Dernière création">
+                    </div>
+                    <div class="featured-content">
+                        <span class="card-badge badge-featured">À la une</span>
+                        <h2>Découvrez mes dernières créations</h2>
+                        <p>Des pièces uniques qui fusionnent mode et expression artistique. Chaque vêtement raconte une histoire, porte une émotion, transmet un message.</p>
+                        <span style="color: #ddac0b; font-size: 0.9em; margin-top: 16px; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+                            Voir les créations
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 16px; height: 16px;">
+                                <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+                            </svg>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Section Boutique transformée en onglet -->
             <div class="boutique-section">
                 <h2>Boutique</h2>
@@ -7841,20 +7861,6 @@
                 <p class="about-text" style="text-align: center; margin-bottom: 40px;">
                     Retrouvez-moi lors de mes prochains évènements, expositions et collaborations artistiques.
                 </p>
-            </div>
-
-            <!-- Article vedette -->
-            <div class="blog-featured" onclick="openCardPopup('event1')">
-                <div class="blog-featured-inner">
-                    <div class="featured-image">
-                        <img src="images/1000007790.jpg" alt="Expositions à venir">
-                    </div>
-                    <div class="featured-content">
-                        <span class="card-badge badge-featured">À la une</span>
-                        <h2>Expositions à venir</h2>
-                        <p>Découvrez mes prochaines expositions et vernissages où je présenterai mes dernières créations. Chaque événement est une occasion unique de vivre l'art de près.</p>
-                    </div>
-                </div>
             </div>
 
             <!-- Grille de cartes -->
@@ -8018,20 +8024,6 @@
                 </p>
             </div>
 
-            <!-- Article vedette -->
-            <div class="blog-featured" onclick="openCardPopup('card1')">
-                <div class="blog-featured-inner">
-                    <div class="featured-image">
-                        <img src="images/1000007798.jpg" alt="Art Vestimentaire">
-                    </div>
-                    <div class="featured-content">
-                        <span class="card-badge badge-featured">À la une</span>
-                        <h2>Art Vestimentaire</h2>
-                        <p>Des pièces uniques qui fusionnent mode et expression artistique. Chaque vêtement raconte une histoire, porte une émotion, transmet un message.</p>
-                    </div>
-                </div>
-            </div>
-
             <!-- Grille de cartes -->
             <div class="gallery">
                 <div class="gallery-item" id="card1" onclick="openCardPopup('card1')">
@@ -8082,20 +8074,6 @@
                 </p>
             </div>
 
-            <!-- Article vedette -->
-            <div class="blog-featured" onclick="openCardPopup('card4')">
-                <div class="blog-featured-inner">
-                    <div class="featured-image">
-                        <img src="images/1000007790.jpg" alt="Expression Personnelle">
-                    </div>
-                    <div class="featured-content">
-                        <span class="card-badge badge-featured">À la une</span>
-                        <h2>Expression Personnelle</h2>
-                        <p>L'art comme moyen d'exprimer mes émotions et mon vécu. Chaque œuvre est un fragment de mon âme, une fenêtre ouverte sur mon monde intérieur.</p>
-                    </div>
-                </div>
-            </div>
-
             <!-- Grille de cartes -->
             <div class="gallery">
                 <div class="gallery-item" id="card4" onclick="openCardPopup('card4')">
@@ -8144,20 +8122,6 @@
                     Mon parcours n'a pas été facile. J'ai traversé des épreuves qui m'ont forgé, façonné en tant que personne et artiste. Chaque obstacle surmonté, chaque moment difficile est devenu une source d'inspiration. À 17 ans, je transforme mes expériences en art,
                     mes blessures en créations. Mon histoire est celle d'une renaissance par l'art, d'une transformation continue où chaque création marque une étape de mon évolution.
                 </p>
-            </div>
-
-            <!-- Article vedette -->
-            <div class="blog-featured" onclick="openCardPopup('card7')">
-                <div class="blog-featured-inner">
-                    <div class="featured-image">
-                        <img src="images/1000007798.jpg" alt="Mon Parcours">
-                    </div>
-                    <div class="featured-content">
-                        <span class="card-badge badge-featured">À la une</span>
-                        <h2>Mon Parcours</h2>
-                        <p>Les épreuves qui m'ont construit et inspiré. Chaque obstacle surmonté est devenu une source d'inspiration, chaque blessure une force créatrice.</p>
-                    </div>
-                </div>
             </div>
 
             <!-- Grille de cartes -->
@@ -8630,6 +8594,20 @@
         }
 
         // Note: attachNavEvents() sera appelé après applyNavOrder() dans DOMContentLoaded
+
+        // Navigation programmatique vers une section (utilisé par l'article vedette)
+        function navigateToSection(sectionId, cardId) {
+            const navLink = document.querySelector('.nav-link[data-section="' + sectionId + '"]');
+            if (navLink) {
+                navLink.click();
+                // Ouvrir le popup de la carte après la transition
+                if (cardId) {
+                    setTimeout(function() {
+                        openCardPopup(cardId);
+                    }, 400);
+                }
+            }
+        }
 
         // Fonctions de recherche
         function toggleSearch() {

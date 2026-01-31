@@ -16194,7 +16194,7 @@
                             if (isAdmin) {
                                 editInstagramPost(post.id);
                             } else {
-                                openInstagramPopupEmbed({ instagramUrl: post.instagram_url });
+                                openInstagramPopup(post.instagram_url, post.image, post.caption);
                             }
                         });
 
@@ -16530,147 +16530,37 @@
         }
 
         // Popup avec l'embed officiel Instagram (carrousels, reels fonctionnels)
-        function openInstagramPopupEmbed(post) {
-            const isReel = post.instagramUrl.includes('/reel/');
+        function openInstagramPopup(instagramUrl, imageUrl, caption) {
+            var isReel = instagramUrl && instagramUrl.includes('/reel/');
 
-            // Nettoyer l'URL pour l'embed
-            let cleanUrl = post.instagramUrl.split('?')[0];
-            if (!cleanUrl.endsWith('/')) cleanUrl += '/';
-
-            const modal = document.createElement('div');
+            var modal = document.createElement('div');
             modal.id = 'instagramEmbedModal';
-            modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.95);
-                z-index: 10000;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                animation: fadeIn 0.3s ease;
-                overflow-y: auto;
-                padding: 20px;
-                box-sizing: border-box;
-            `;
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.3s ease; padding: 20px; box-sizing: border-box;';
 
-            modal.innerHTML = `
-                <div style="
-                    background: #ffffff;
-                    border-radius: 12px;
-                    max-width: 550px;
-                    width: 100%;
-                    max-height: 90vh;
-                    overflow: hidden;
-                    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
-                    position: relative;
-                ">
-                    <!-- Bouton fermer -->
-                    <button id="closeInstagramModal" style="
-                        position: absolute;
-                        top: -45px;
-                        right: 0;
-                        background: none;
-                        border: none;
-                        color: #ffffff;
-                        font-size: 36px;
-                        cursor: pointer;
-                        padding: 5px 10px;
-                        line-height: 1;
-                        font-weight: 300;
-                        z-index: 10001;
-                        transition: transform 0.2s ease;
-                    " onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">×</button>
+            modal.innerHTML =
+                '<div style="background: linear-gradient(135deg, rgba(20, 20, 30, 0.98), rgba(10, 10, 20, 0.98)); border-radius: 20px; max-width: 500px; width: 100%; max-height: 90vh; overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.5); border: 2px solid rgba(221,172,11,0.3); position: relative;">' +
+                    '<button id="closeInstaPopup" style="position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: none; color: #fff; font-size: 24px; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10001; transition: background 0.3s ease;" onmouseover="this.style.background=\'rgba(255,255,255,0.2)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.1)\'">✕</button>' +
+                    '<div style="position: relative;">' +
+                        (imageUrl ? '<img src="' + imageUrl + '" alt="Post Instagram" style="width: 100%; max-height: 60vh; object-fit: cover; display: block;">' : '') +
+                        (isReel ? '<div style="position: absolute; top: 15px; left: 15px; background: linear-gradient(135deg, rgba(221,172,11,0.95), rgba(196,209,12,0.95)); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85em; color: #000;">REEL</div>' +
+                        '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70px; height: 70px; background: rgba(0,0,0,0.5); backdrop-filter: blur(10px); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(255,255,255,0.6); pointer-events: none;"><div style="width: 0; height: 0; border-left: 22px solid white; border-top: 13px solid transparent; border-bottom: 13px solid transparent; margin-left: 5px;"></div></div>' : '') +
+                    '</div>' +
+                    (caption ? '<div style="padding: 16px 20px; border-top: 1px solid rgba(221,172,11,0.2);"><p style="color: rgba(255,255,255,0.85); font-size: 0.95em; margin: 0; line-height: 1.5;">' + caption + '</p></div>' : '') +
+                    '<div style="padding: 16px 20px; border-top: 1px solid rgba(221,172,11,0.15);">' +
+                        '<a href="' + instagramUrl + '" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 20px; background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); border-radius: 12px; color: #fff; text-decoration: none; font-weight: 700; font-size: 1em; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(225, 48, 108, 0.4);" onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 20px rgba(225, 48, 108, 0.5)\'" onmouseout="this.style.transform=\'translateY(0)\';this.style.boxShadow=\'0 4px 15px rgba(225, 48, 108, 0.4)\'">' +
+                            '<svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>' +
+                            (isReel ? 'Voir le Reel sur Instagram' : 'Voir sur Instagram') +
+                        '</a>' +
+                    '</div>' +
+                '</div>';
 
-                    <!-- Container pour l'embed Instagram -->
-                    <div id="instagramEmbedContainer" style="
-                        overflow-y: auto;
-                        max-height: calc(90vh - 70px);
-                    ">
-                        <!-- Loading state -->
-                        <div id="instagramLoading" style="
-                            text-align: center;
-                            padding: 60px 20px;
-                            background: #fafafa;
-                        ">
-                            <div style="
-                                width: 40px;
-                                height: 40px;
-                                border: 3px solid #dbdbdb;
-                                border-top-color: #262626;
-                                border-radius: 50%;
-                                animation: spin 1s linear infinite;
-                                margin: 0 auto 15px;
-                            "></div>
-                            <p style="color: #262626; font-size: 14px; margin: 0;">Chargement du post Instagram...</p>
-                        </div>
-
-                        <!-- Blockquote embed officiel Instagram -->
-                        <blockquote class="instagram-media"
-                            data-instgrm-captioned
-                            data-instgrm-permalink="${cleanUrl}"
-                            data-instgrm-version="14"
-                            style="
-                                background: #FFF;
-                                border: 0;
-                                border-radius: 3px;
-                                box-shadow: none;
-                                margin: 0;
-                                max-width: 550px;
-                                min-width: 326px;
-                                padding: 0;
-                                width: 100%;
-                            ">
-                        </blockquote>
-                    </div>
-
-                    <!-- Footer avec bouton -->
-                    <div style="
-                        padding: 16px;
-                        border-top: 1px solid #efefef;
-                        background: #fafafa;
-                    ">
-                        <a href="${post.instagramUrl}" target="_blank" rel="noopener noreferrer" style="
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            gap: 8px;
-                            padding: 12px 20px;
-                            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
-                            border-radius: 8px;
-                            color: #fff;
-                            text-decoration: none;
-                            font-weight: 600;
-                            font-size: 14px;
-                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                            transition: all 0.3s ease;
-                            box-shadow: 0 4px 15px rgba(225, 48, 108, 0.4);
-                        " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(225, 48, 108, 0.5)'"
-                           onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 15px rgba(225, 48, 108, 0.4)'">
-                            <i class="fab fa-instagram"></i>
-                            ${isReel ? 'Voir le Reel sur Instagram' : 'Voir sur Instagram'}
-                        </a>
-                    </div>
-                </div>
-
-                <style>
-                    @keyframes spin {
-                        to { transform: rotate(360deg); }
-                    }
-                </style>
-            `;
-
-            // Fermer au clic sur le fond ou le bouton
             modal.addEventListener('click', function(e) {
-                if (e.target === modal || e.target.id === 'closeInstagramModal') {
+                if (e.target === modal || e.target.id === 'closeInstaPopup') {
                     modal.remove();
                 }
             });
 
-            // Fermer avec Escape
-            const escHandler = function(e) {
+            var escHandler = function(e) {
                 if (e.key === 'Escape') {
                     modal.remove();
                     document.removeEventListener('keydown', escHandler);
@@ -16679,37 +16569,6 @@
             document.addEventListener('keydown', escHandler);
 
             document.body.appendChild(modal);
-
-            // Charger le script Instagram embed et traiter
-            loadInstagramEmbed();
-        }
-
-        // Charger le SDK Instagram pour les embeds
-        function loadInstagramEmbed() {
-            // Cacher le loading quand l'embed est pret
-            const hideLoading = function() {
-                const loading = document.getElementById('instagramLoading');
-                if (loading) loading.style.display = 'none';
-            };
-
-            // Si le script est deja charge, juste retraiter les embeds
-            if (window.instgrm && window.instgrm.Embeds) {
-                window.instgrm.Embeds.process();
-                setTimeout(hideLoading, 1000);
-                return;
-            }
-
-            // Charger le script Instagram
-            const script = document.createElement('script');
-            script.src = 'https://www.instagram.com/embed.js';
-            script.async = true;
-            script.onload = function() {
-                if (window.instgrm && window.instgrm.Embeds) {
-                    window.instgrm.Embeds.process();
-                    setTimeout(hideLoading, 1000);
-                }
-            };
-            document.body.appendChild(script);
         }
 
         // Notification helper

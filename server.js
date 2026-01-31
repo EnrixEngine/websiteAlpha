@@ -425,6 +425,17 @@ async function initDatabase() {
         )
     `);
 
+    db.run(`
+        CREATE TABLE IF NOT EXISTS instagram_posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            instagram_url TEXT NOT NULL,
+            image TEXT NOT NULL,
+            caption TEXT DEFAULT '',
+            position INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
     // Migration: ajouter stripe_session_id si la table existe deja sans cette colonne
     try {
         const tableInfo = db.exec("PRAGMA table_info(orders)");
@@ -1432,52 +1443,81 @@ app.post('/api/upload', authenticateToken, upload.single('image'), async (req, r
     }
 });
 
-// ==================== API INSTAGRAM FEED ====================
+// ==================== API INSTAGRAM POSTS ====================
 
-let instagramCache = { data: null, timestamp: 0 };
-const INSTAGRAM_CACHE_DURATION = 60 * 60 * 1000; // 1 heure
-
-app.get('/api/instagram-feed', async (req, res) => {
-    const token = process.env.INSTAGRAM_ACCESS_TOKEN;
-    if (!token) {
-        return res.json([]);
-    }
-
-    // Retourner le cache s'il est encore valide
-    if (instagramCache.data && (Date.now() - instagramCache.timestamp) < INSTAGRAM_CACHE_DURATION) {
-        return res.json(instagramCache.data);
-    }
-
+// Liste des posts Instagram
+app.get('/api/instagram-posts', (req, res) => {
     try {
-        const response = await fetch(
-            'https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp&limit=5&access_token=' + token
-        );
-        const result = await response.json();
+        const posts = dbAll('SELECT * FROM instagram_posts ORDER BY position ASC, created_at DESC');
+        res.json(posts || []);
+    } catch (error) {
+        console.error('Erreur chargement posts Instagram:', error);
+        res.json([]);
+    }
+});
 
-        if (result.error) {
-            console.error('Erreur Instagram API:', result.error.message);
-            // Retourner le cache meme expire si l'API echoue
-            if (instagramCache.data) return res.json(instagramCache.data);
-            return res.json([]);
+// Ajouter un post Instagram (admin)
+app.post('/api/instagram-posts', authenticateToken, isAdmin, upload.single('image'), (req, res) => {
+    try {
+        const { instagram_url, caption } = req.body;
+
+        if (!instagram_url) {
+            return res.status(400).json({ error: 'URL Instagram requise' });
+        }
+        if (!req.file) {
+            return res.status(400).json({ error: 'Image requise' });
         }
 
-        const posts = (result.data || []).map(post => ({
-            id: post.id,
-            caption: post.caption || '',
-            mediaType: post.media_type,
-            mediaUrl: post.media_url,
-            thumbnailUrl: post.thumbnail_url || post.media_url,
-            permalink: post.permalink,
-            timestamp: post.timestamp
-        }));
+        // Convertir l'image en base64 pour stockage en DB
+        const b64 = Buffer.from(req.file.buffer).toString('base64');
+        const imageData = 'data:' + req.file.mimetype + ';base64,' + b64;
 
-        // Mettre en cache
-        instagramCache = { data: posts, timestamp: Date.now() };
-        res.json(posts);
+        const maxPos = dbGet('SELECT MAX(position) as maxPos FROM instagram_posts');
+        const nextPos = (maxPos && maxPos.maxPos != null) ? maxPos.maxPos + 1 : 0;
+
+        const result = dbRun(
+            'INSERT INTO instagram_posts (instagram_url, image, caption, position) VALUES (?, ?, ?, ?)',
+            [instagram_url, imageData, caption || '', nextPos]
+        );
+
+        res.json({ success: true, id: result.lastID });
     } catch (error) {
-        console.error('Erreur fetch Instagram:', error.message);
-        if (instagramCache.data) return res.json(instagramCache.data);
-        res.json([]);
+        console.error('Erreur ajout post Instagram:', error);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// Modifier un post Instagram (admin)
+app.put('/api/instagram-posts/:id', authenticateToken, isAdmin, upload.single('image'), (req, res) => {
+    try {
+        const { instagram_url, caption } = req.body;
+        const postId = req.params.id;
+
+        if (req.file) {
+            const b64 = Buffer.from(req.file.buffer).toString('base64');
+            const imageData = 'data:' + req.file.mimetype + ';base64,' + b64;
+            dbRun('UPDATE instagram_posts SET instagram_url = ?, image = ?, caption = ? WHERE id = ?',
+                [instagram_url, imageData, caption || '', postId]);
+        } else {
+            dbRun('UPDATE instagram_posts SET instagram_url = ?, caption = ? WHERE id = ?',
+                [instagram_url, caption || '', postId]);
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Erreur modification post Instagram:', error);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// Supprimer un post Instagram (admin)
+app.delete('/api/instagram-posts/:id', authenticateToken, isAdmin, (req, res) => {
+    try {
+        dbRun('DELETE FROM instagram_posts WHERE id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Erreur suppression post Instagram:', error);
+        res.status(500).json({ error: 'Erreur serveur' });
     }
 });
 

@@ -1848,202 +1848,270 @@
                 transform: translateY(0) scale(1);
             }
         }
-        /* Galerie */
-        
-        .gallery {
-            display: flex;
-            gap: 30px;
-            margin: 50px auto;
-            justify-content: center;
-            padding: 20px 10px 30px 10px;
-            flex-wrap: wrap;
-        }
-        
-        .gallery-item {
-            background: linear-gradient(135deg, rgba(30, 58, 138, 0.25), rgba(37, 99, 235, 0.15));
+        /* ============ BLOG CARDS STYLE ============ */
+
+        /* Article vedette (featured) */
+        .blog-featured {
+            background: linear-gradient(135deg, rgba(221, 172, 11, 0.15), rgba(221, 172, 11, 0.08));
             backdrop-filter: blur(25px) saturate(180%);
             -webkit-backdrop-filter: blur(25px) saturate(180%);
-            border-radius: 30px;
-            padding: 40px;
-            text-align: center;
-            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-            border: 2px solid rgba(221, 172, 11, 0.3);
+            border-radius: 24px;
+            overflow: hidden;
+            border: 2px solid rgba(221, 172, 11, 0.35);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5), 0 0 40px rgba(221, 172, 11, 0.15);
+            margin: 30px auto 40px;
             cursor: pointer;
-            position: relative;
-            min-height: 450px;
-            min-width: 360px;
-            flex: 0 0 360px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(221, 172, 11, 0.2) inset, 0 0 30px rgba(221, 172, 11, 0.2), 0 5px 15px rgba(37, 99, 235, 0.3);
-            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        
-        .gallery-item::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            z-index: 0;
-            border-radius: 20px;
-            overflow: hidden;
-        }
-        /* Background images for each card using ::after */
-        
-        #card1::after {
-            background-image: url('images/1000007790.jpg');
-        }
-        
-        #card2::after {
-            background-image: url('images/1000007789.jpg');
-        }
-        
-        #card3::after {
-            background-image: url('images/1000007796.jpg');
-        }
-        
-        #card4::after {
-            background-image: url('images/1000007790.jpg');
-        }
-        
-        #card5::after {
-            background-image: url('images/1000007789.jpg');
-        }
-        
-        #card6::after {
-            background-image: url('images/1000007796.jpg');
-        }
-        
-        #card7::after {
-            background-image: url('images/1000007798.jpg');
-        }
-        
-        #card8::after {
-            background-image: url('images/1000013795.jpg');
-        }
-        
-        #card9::after {
-            background-image: url('images/1000007796.jpg');
-        }
-        
-        .gallery-item>* {
-            position: relative;
-            z-index: 2;
-        }
-        
-        .gallery-item:hover {
-            transform: translateY(-15px) scale(1.03);
-            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(221, 172, 11, 0.5) inset, 0 0 50px rgba(221, 172, 11, 0.4), 0 10px 25px rgba(37, 99, 235, 0.5);
+
+        .blog-featured:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 50px rgba(221, 172, 11, 0.25);
             border-color: rgba(221, 172, 11, 0.6);
         }
-        
-        .icon {
-            font-size: 4em;
-            margin-bottom: 25px;
-            filter: drop-shadow(0 0 15px rgba(221, 172, 11, 0.7));
-            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+
+        .blog-featured-inner {
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
         }
-        
-        .gallery-item:hover .icon {
-            filter: drop-shadow(0 0 30px rgba(221, 172, 11, 1)) drop-shadow(0 0 50px rgba(221, 172, 11, 0.6));
-            transform: scale(1.15) translateY(-5px);
+
+        .blog-featured .featured-image {
+            flex: 0 0 42%;
+            min-height: 280px;
+            overflow: hidden;
+            position: relative;
         }
-        
-        .icon img {
-            width: 80px;
-            height: 80px;
+
+        .blog-featured .featured-image img {
+            width: 100%;
+            height: 100%;
             object-fit: cover;
-            border-radius: 50%;
-            border: none;
-            box-shadow: 0 0 30px rgba(221, 172, 11, 0.6), 0 0 15px rgba(255, 255, 255, 0.3);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.6s ease;
         }
-        
-        .gallery-item:hover .icon img {
-            box-shadow: 0 0 40px rgba(221, 172, 11, 0.9), 0 0 20px rgba(255, 255, 255, 0.5), 0 8px 25px rgba(0, 0, 0, 0.4);
+
+        .blog-featured:hover .featured-image img {
             transform: scale(1.05);
         }
-        
+
+        .blog-featured .featured-content {
+            flex: 1;
+            padding: 35px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .blog-featured .card-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: rgba(221, 172, 11, 0.2);
+            border: 1px solid rgba(221, 172, 11, 0.4);
+            border-radius: 50px;
+            color: #ddac0b;
+            font-size: 0.85em;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            width: fit-content;
+            text-transform: uppercase;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .blog-featured .featured-content h2 {
+            color: #ffffff;
+            font-size: 1.8em;
+            font-weight: 800;
+            font-family: 'Montserrat', sans-serif;
+            margin-bottom: 16px;
+            line-height: 1.3;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .blog-featured .featured-content p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1em;
+            line-height: 1.7;
+        }
+
+        /* Grille de cartes blog */
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 28px;
+            margin: 10px auto 50px;
+            padding: 0;
+        }
+
+        /* Carte blog individuelle */
+        .gallery-item {
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.2), rgba(37, 99, 235, 0.1));
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border-radius: 20px;
+            padding: 0;
+            text-align: left;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            border: 1.5px solid rgba(221, 172, 11, 0.2);
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35), 0 0 20px rgba(221, 172, 11, 0.1);
+            overflow: hidden;
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 35px rgba(221, 172, 11, 0.2);
+            border-color: rgba(221, 172, 11, 0.5);
+        }
+
+        /* Image de la carte */
+        .gallery-item .card-image {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+        }
+
+        .gallery-item .card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .gallery-item:hover .card-image img {
+            transform: scale(1.08);
+        }
+
+        /* Badge catégorie sur l'image */
+        .card-badge {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            padding: 5px 14px;
+            border-radius: 50px;
+            font-size: 0.8em;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            font-family: 'Montserrat', sans-serif;
+            z-index: 2;
+            text-transform: uppercase;
+        }
+
+        .card-badge.badge-creation {
+            background: rgba(221, 172, 11, 0.9);
+            color: #000;
+        }
+
+        .card-badge.badge-event {
+            background: rgba(65, 105, 225, 0.9);
+            color: #fff;
+        }
+
+        .card-badge.badge-art {
+            background: rgba(196, 209, 12, 0.9);
+            color: #000;
+        }
+
+        .card-badge.badge-histoire {
+            background: rgba(180, 100, 220, 0.9);
+            color: #fff;
+        }
+
+        .card-badge.badge-collab {
+            background: rgba(76, 175, 80, 0.9);
+            color: #fff;
+        }
+
+        .card-badge.badge-featured {
+            background: rgba(221, 172, 11, 0.2);
+            border: 1px solid rgba(221, 172, 11, 0.5);
+            color: #ddac0b;
+        }
+
+        /* Corps de la carte */
+        .gallery-item .card-body {
+            padding: 22px 24px 28px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .gallery-item .card-date {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.85em;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
         .gallery-item h3 {
             color: #ddac0b;
-            font-size: 1.8em;
-            margin-bottom: 15px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            text-shadow: 0 3px 15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(221, 172, 11, 0.7), 0 0 50px rgba(221, 172, 11, 0.4);
+            font-size: 1.3em;
+            margin-bottom: 12px;
+            font-weight: 700;
             font-family: 'Montserrat', sans-serif;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            line-height: 1.3;
+            transition: color 0.3s ease;
         }
-        
+
         .gallery-item:hover h3 {
             color: #ffd700;
-            text-shadow: 0 3px 15px rgba(0, 0, 0, 0.9), 0 0 40px rgba(221, 172, 11, 0.9), 0 0 20px rgba(255, 215, 0, 0.6);
-            transform: translateY(-3px);
         }
-        
+
         .gallery-item p {
-            color: rgba(255, 255, 255, 0.95);
-            line-height: 1.7;
-            font-size: 1.1em;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+            color: rgba(255, 255, 255, 0.75);
+            line-height: 1.6;
+            font-size: 0.95em;
             font-weight: 400;
-            transition: all 0.3s ease;
-            margin-bottom: 20px;
+            margin-bottom: 0;
         }
-        
+
         .gallery-item:hover p {
-            color: rgba(255, 255, 255, 1);
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+            color: rgba(255, 255, 255, 0.9);
         }
-        /* Bouton Rejoindre dans event1 */
-        
-        .gallery-item a[href="#contact"] {
+
+        /* Bouton dans les cartes */
+        .gallery-item .card-body a[href="#contact"] {
             display: inline-block;
-            margin-top: 20px;
-            padding: 12px 30px;
+            margin-top: auto;
+            padding-top: 16px;
+        }
+
+        .gallery-item .card-body a[href="#contact"] span {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 24px;
             background: linear-gradient(135deg, #ddac0b, #c4d10c);
             color: #001f3f;
             font-weight: 700;
             text-decoration: none;
             border-radius: 25px;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: 0 4px 15px rgba(221, 172, 11, 0.4);
-            position: relative;
-            z-index: 3;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(221, 172, 11, 0.3);
+            font-size: 0.9em;
         }
-        
-        .gallery-item a[href="#contact"]:hover {
-            transform: translateY(-3px) scale(1.05);
-            box-shadow: 0 8px 25px rgba(221, 172, 11, 0.6);
-            background: linear-gradient(135deg, #ffd700, #ddac0b);
+
+        .gallery-item .card-body a[href="#contact"] span:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(221, 172, 11, 0.5);
         }
-        
-        .gallery-item a[href="#contact"]:active {
-            transform: translateY(-1px) scale(1.02);
-        }
-        /* Animation de bordure pour les cartes évènements */
-        
+
+        /* Anciens styles supprimés - plus de ::after backgrounds */
+
+        /* Animation subtile pour les cartes événements */
         @keyframes borderPulse {
-            0%,
-            100% {
-                border-color: rgba(221, 172, 11, 0.3);
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(221, 172, 11, 0.2) inset, 0 0 30px rgba(221, 172, 11, 0.2), 0 5px 15px rgba(37, 99, 235, 0.3);
+            0%, 100% {
+                border-color: rgba(65, 105, 225, 0.3);
             }
             50% {
-                border-color: rgba(221, 172, 11, 0.5);
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(221, 172, 11, 0.4) inset, 0 0 40px rgba(221, 172, 11, 0.3), 0 5px 15px rgba(37, 99, 235, 0.3);
+                border-color: rgba(65, 105, 225, 0.6);
             }
         }
-        
+
         #evenements .gallery-item {
             animation: borderPulse 3s ease-in-out infinite;
         }
@@ -2820,13 +2888,23 @@
             .about-text {
                 font-size: 1em;
             }
-            /* Galerie */
+            /* Galerie & Blog cards */
             .gallery {
-                gap: 15px;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
             }
-            .gallery-item {
-                min-width: 250px;
-                flex: 0 0 250px;
+            .blog-featured .blog-featured-inner {
+                flex-direction: column;
+            }
+            .blog-featured .featured-image {
+                flex: none;
+                min-height: 200px;
+            }
+            .blog-featured .featured-content {
+                padding: 25px 20px;
+            }
+            .blog-featured .featured-content h2 {
+                font-size: 1.4em;
             }
             /* Section contact */
             .contact-section {
@@ -2934,9 +3012,27 @@
                 font-size: 0.95em;
                 line-height: 1.6;
             }
-            .gallery-item {
-                min-width: 220px;
-                flex: 0 0 220px;
+            .gallery {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            .gallery-item .card-image {
+                height: 160px;
+            }
+            .gallery-item .card-body {
+                padding: 16px 18px 20px;
+            }
+            .gallery-item h3 {
+                font-size: 1.15em;
+            }
+            .blog-featured {
+                margin: 20px auto 30px;
+            }
+            .blog-featured .featured-content h2 {
+                font-size: 1.2em;
+            }
+            .blog-featured .featured-content p {
+                font-size: 0.95em;
             }
             .contact-section h2 {
                 font-size: 1.5em;
@@ -7747,43 +7843,64 @@
                 </p>
             </div>
 
-            <div class="gallery">
-                <div class="gallery-item" id="event1" style="position: relative;">
-                    <div class="icon" onclick="openCardPopup('event1')" style="cursor: pointer;">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ddac0b" style="width: 80px; height: 80px;">
-                            <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"/>
-                        </svg>
+            <!-- Article vedette -->
+            <div class="blog-featured" onclick="openCardPopup('event1')">
+                <div class="blog-featured-inner">
+                    <div class="featured-image">
+                        <img src="images/1000007790.jpg" alt="Expositions à venir">
                     </div>
-                    <h3 onclick="openCardPopup('event1')" style="cursor: pointer;">Expositions à venir</h3>
-                    <p onclick="openCardPopup('event1')" style="cursor: pointer;">Découvrez mes prochaines expositions et vernissages où je présenterai mes dernières créations</p>
-                    <a href="#contact" onclick="scrollToContact(event); return false;">
-                        <span style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 20px; height: 20px;">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                            </svg>
-                            Rejoindre
-                        </span>
-                    </a>
+                    <div class="featured-content">
+                        <span class="card-badge badge-featured">À la une</span>
+                        <h2>Expositions à venir</h2>
+                        <p>Découvrez mes prochaines expositions et vernissages où je présenterai mes dernières créations. Chaque événement est une occasion unique de vivre l'art de près.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grille de cartes -->
+            <div class="gallery">
+                <div class="gallery-item" id="event1" onclick="openCardPopup('event1')">
+                    <div class="card-image">
+                        <img src="images/1000007790.jpg" alt="Expositions à venir">
+                        <span class="card-badge badge-event">Exposition</span>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-date">2026</span>
+                        <h3>Expositions à venir</h3>
+                        <p>Découvrez mes prochaines expositions et vernissages où je présenterai mes dernières créations</p>
+                        <a href="#contact" onclick="event.stopPropagation(); scrollToContact(event); return false;">
+                            <span>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 16px; height: 16px;">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                </svg>
+                                Rejoindre
+                            </span>
+                        </a>
+                    </div>
                 </div>
 
                 <div class="gallery-item" id="event2" onclick="openCardPopup('event2')">
-                    <div class="icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ddac0b" style="width: 80px; height: 80px;">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                        </svg>
+                    <div class="card-image">
+                        <img src="images/1000007789.jpg" alt="Évènements passés">
+                        <span class="card-badge badge-event">Passé</span>
                     </div>
-                    <h3>Évènements passés</h3>
-                    <p>Revivez les moments forts de mes précédents évènements et collaborations artistiques</p>
+                    <div class="card-body">
+                        <span class="card-date">2025</span>
+                        <h3>Évènements passés</h3>
+                        <p>Revivez les moments forts de mes précédents évènements et collaborations artistiques</p>
+                    </div>
                 </div>
 
                 <div class="gallery-item" id="event3" onclick="openCardPopup('event3')">
-                    <div class="icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ddac0b" style="width: 80px; height: 80px;">
-                            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                        </svg>
+                    <div class="card-image">
+                        <img src="images/1000013795.jpg" alt="Collaborations">
+                        <span class="card-badge badge-collab">Collaboration</span>
                     </div>
-                    <h3>Collaborations</h3>
-                    <p>Projets collaboratifs avec d'autres artistes et créateurs pour des évènements uniques</p>
+                    <div class="card-body">
+                        <span class="card-date">2026</span>
+                        <h3>Collaborations</h3>
+                        <p>Projets collaboratifs avec d'autres artistes et créateurs pour des évènements uniques</p>
+                    </div>
                 </div>
             </div>
 
@@ -7894,36 +8011,63 @@
         <!-- Section Créations Uniques -->
         <div class="content-section" id="creations">
             <div class="main-card">
-                <h2 style="color: #ddac0b; font-size: 2.5em; text-align: center; margin-bottom: 30px; text-shadow: 0 0 20px rgba(221, 172, 11, 0.5);"><i class="fas fa-paint-brush" style="margin-right: 12px;"></i>Creations Uniques</h2>
+                <h2 style="color: #ddac0b; font-size: 2.5em; text-align: center; margin-bottom: 30px; text-shadow: 0 0 20px rgba(221, 172, 11, 0.5);"><i class="fas fa-paint-brush" style="margin-right: 12px;"></i>Créations Uniques</h2>
                 <p class="about-text">
                     Chaque vêtement que je crée est une pièce unique, pensée et réalisée à la main. Mes créations ne sont pas de simples habits, ce sont des toiles sur lesquelles j'exprime mes émotions, mes rêves et mon parcours personnel. Chaque trait, chaque couleur raconte
                     une partie de mon histoire.
                 </p>
             </div>
 
+            <!-- Article vedette -->
+            <div class="blog-featured" onclick="openCardPopup('card1')">
+                <div class="blog-featured-inner">
+                    <div class="featured-image">
+                        <img src="images/1000007798.jpg" alt="Art Vestimentaire">
+                    </div>
+                    <div class="featured-content">
+                        <span class="card-badge badge-featured">À la une</span>
+                        <h2>Art Vestimentaire</h2>
+                        <p>Des pièces uniques qui fusionnent mode et expression artistique. Chaque vêtement raconte une histoire, porte une émotion, transmet un message.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grille de cartes -->
             <div class="gallery">
                 <div class="gallery-item" id="card1" onclick="openCardPopup('card1')">
-                    <div class="icon">
+                    <div class="card-image">
                         <img src="images/1000007798.jpg" alt="Créations Uniques">
+                        <span class="card-badge badge-creation">Création</span>
                     </div>
-                    <h3>Art Vestimentaire</h3>
-                    <p>Des pièces uniques qui fusionnent mode et expression artistique</p>
+                    <div class="card-body">
+                        <span class="card-date">Collection 2026</span>
+                        <h3>Art Vestimentaire</h3>
+                        <p>Des pièces uniques qui fusionnent mode et expression artistique</p>
+                    </div>
                 </div>
 
                 <div class="gallery-item" id="card2" onclick="openCardPopup('card2')">
-                    <div class="icon">
+                    <div class="card-image">
                         <img src="images/1000013795.jpg" alt="Techniques">
+                        <span class="card-badge badge-creation">Technique</span>
                     </div>
-                    <h3>Techniques Mixtes</h3>
-                    <p>Peinture, dessin et customisation pour des résultats exceptionnels</p>
+                    <div class="card-body">
+                        <span class="card-date">Savoir-faire</span>
+                        <h3>Techniques Mixtes</h3>
+                        <p>Peinture, dessin et customisation pour des résultats exceptionnels</p>
+                    </div>
                 </div>
 
                 <div class="gallery-item" id="card3" onclick="openCardPopup('card3')">
-                    <div class="icon">
+                    <div class="card-image">
                         <img src="images/1000007798.jpg" alt="Collection">
+                        <span class="card-badge badge-creation">Édition limitée</span>
                     </div>
-                    <h3>Collections Limitées</h3>
-                    <p>Chaque création est produite en édition limitée ou unique</p>
+                    <div class="card-body">
+                        <span class="card-date">Exclusif</span>
+                        <h3>Collections Limitées</h3>
+                        <p>Chaque création est produite en édition limitée ou unique</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -7938,29 +8082,56 @@
                 </p>
             </div>
 
+            <!-- Article vedette -->
+            <div class="blog-featured" onclick="openCardPopup('card4')">
+                <div class="blog-featured-inner">
+                    <div class="featured-image">
+                        <img src="images/1000007790.jpg" alt="Expression Personnelle">
+                    </div>
+                    <div class="featured-content">
+                        <span class="card-badge badge-featured">À la une</span>
+                        <h2>Expression Personnelle</h2>
+                        <p>L'art comme moyen d'exprimer mes émotions et mon vécu. Chaque œuvre est un fragment de mon âme, une fenêtre ouverte sur mon monde intérieur.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grille de cartes -->
             <div class="gallery">
                 <div class="gallery-item" id="card4" onclick="openCardPopup('card4')">
-                    <div class="icon">
+                    <div class="card-image">
                         <img src="images/1000007790.jpg" alt="Expression">
+                        <span class="card-badge badge-art">Expression</span>
                     </div>
-                    <h3>Expression Personnelle</h3>
-                    <p>L'art comme moyen d'exprimer mes émotions et mon vécu</p>
+                    <div class="card-body">
+                        <span class="card-date">Démarche artistique</span>
+                        <h3>Expression Personnelle</h3>
+                        <p>L'art comme moyen d'exprimer mes émotions et mon vécu</p>
+                    </div>
                 </div>
 
                 <div class="gallery-item" id="card5" onclick="openCardPopup('card5')">
-                    <div class="icon">
+                    <div class="card-image">
                         <img src="images/1000007789.jpg" alt="Symbolisme">
+                        <span class="card-badge badge-art">Symbolisme</span>
                     </div>
-                    <h3>Symbolisme</h3>
-                    <p>Chaque élément de mes créations porte une signification profonde</p>
+                    <div class="card-body">
+                        <span class="card-date">Sens caché</span>
+                        <h3>Symbolisme</h3>
+                        <p>Chaque élément de mes créations porte une signification profonde</p>
+                    </div>
                 </div>
 
                 <div class="gallery-item" id="card6" onclick="openCardPopup('card6')">
-                    <div class="icon">
+                    <div class="card-image">
                         <img src="images/1000007796.jpg" alt="Évolution">
+                        <span class="card-badge badge-art">Évolution</span>
                     </div>
-                    <h3>Évolution Artistique</h3>
-                    <p>Mon style évolue avec mon parcours et mes expériences</p>
+                    <div class="card-body">
+                        <span class="card-date">Parcours créatif</span>
+                        <h3>Évolution Artistique</h3>
+                        <p>Mon style évolue avec mon parcours et mes expériences</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -7975,29 +8146,56 @@
                 </p>
             </div>
 
+            <!-- Article vedette -->
+            <div class="blog-featured" onclick="openCardPopup('card7')">
+                <div class="blog-featured-inner">
+                    <div class="featured-image">
+                        <img src="images/1000007798.jpg" alt="Mon Parcours">
+                    </div>
+                    <div class="featured-content">
+                        <span class="card-badge badge-featured">À la une</span>
+                        <h2>Mon Parcours</h2>
+                        <p>Les épreuves qui m'ont construit et inspiré. Chaque obstacle surmonté est devenu une source d'inspiration, chaque blessure une force créatrice.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grille de cartes -->
             <div class="gallery">
                 <div class="gallery-item" id="card7" onclick="openCardPopup('card7')">
-                    <div class="icon">
+                    <div class="card-image">
                         <img src="images/1000007798.jpg" alt="Parcours">
+                        <span class="card-badge badge-histoire">Parcours</span>
                     </div>
-                    <h3>Mon Parcours</h3>
-                    <p>Les épreuves qui m'ont construit et inspiré</p>
+                    <div class="card-body">
+                        <span class="card-date">Origines</span>
+                        <h3>Mon Parcours</h3>
+                        <p>Les épreuves qui m'ont construit et inspiré</p>
+                    </div>
                 </div>
 
                 <div class="gallery-item" id="card8" onclick="openCardPopup('card8')">
-                    <div class="icon">
+                    <div class="card-image">
                         <img src="images/1000013795.jpg" alt="Authenticité">
+                        <span class="card-badge badge-histoire">Identité</span>
                     </div>
-                    <h3>Authenticité</h3>
-                    <p>Chaque création reflète ma vérité et mes expériences</p>
+                    <div class="card-body">
+                        <span class="card-date">Philosophie</span>
+                        <h3>Authenticité</h3>
+                        <p>Chaque création reflète ma vérité et mes expériences</p>
+                    </div>
                 </div>
 
                 <div class="gallery-item" id="card9" onclick="openCardPopup('card9')">
-                    <div class="icon">
+                    <div class="card-image">
                         <img src="images/1000007796.jpg" alt="Vision">
+                        <span class="card-badge badge-histoire">Vision</span>
                     </div>
-                    <h3>Ma Vision</h3>
-                    <p>Créer un univers artistique unique et inspirant</p>
+                    <div class="card-body">
+                        <span class="card-date">Futur</span>
+                        <h3>Ma Vision</h3>
+                        <p>Créer un univers artistique unique et inspirant</p>
+                    </div>
                 </div>
             </div>
         </div>

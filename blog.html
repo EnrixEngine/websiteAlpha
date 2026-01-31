@@ -16475,10 +16475,32 @@
             const file = event.target.files[0];
             if (!file) return;
 
+            document.getElementById('imageFileName').textContent = file.name;
+
+            // Compresser l'image via canvas pour éviter de dépasser la limite localStorage
             var reader = new FileReader();
             reader.onload = function(e) {
-                tempImageData = e.target.result;
-                document.getElementById('imageFileName').textContent = file.name;
+                var img = new Image();
+                img.onload = function() {
+                    var canvas = document.createElement('canvas');
+                    var maxWidth = 400;
+                    var maxHeight = 400;
+                    var width = img.width;
+                    var height = img.height;
+
+                    if (width > maxWidth || height > maxHeight) {
+                        var ratio = Math.min(maxWidth / width, maxHeight / height);
+                        width = Math.round(width * ratio);
+                        height = Math.round(height * ratio);
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    tempImageData = canvas.toDataURL('image/jpeg', 0.7);
+                };
+                img.src = e.target.result;
             };
             reader.readAsDataURL(file);
         }
@@ -16540,7 +16562,12 @@
                 config.instagramPosts.unshift(newPost); // Ajouter au début
             }
 
-            localStorage.setItem('alphamouv_config', JSON.stringify(config));
+            try {
+                localStorage.setItem('alphamouv_config', JSON.stringify(config));
+            } catch (e) {
+                alert('Erreur : le stockage local est plein. Essayez de supprimer des anciens posts ou de réduire la taille des images.');
+                return;
+            }
             addLog('success', 'Post Instagram ' + (currentEditingPostId ? 'modifié' : 'ajouté'));
 
             closeInstagramModal();

@@ -1432,6 +1432,55 @@ app.post('/api/upload', authenticateToken, upload.single('image'), async (req, r
     }
 });
 
+// ==================== API INSTAGRAM FEED ====================
+
+let instagramCache = { data: null, timestamp: 0 };
+const INSTAGRAM_CACHE_DURATION = 60 * 60 * 1000; // 1 heure
+
+app.get('/api/instagram-feed', async (req, res) => {
+    const token = process.env.INSTAGRAM_ACCESS_TOKEN;
+    if (!token) {
+        return res.json([]);
+    }
+
+    // Retourner le cache s'il est encore valide
+    if (instagramCache.data && (Date.now() - instagramCache.timestamp) < INSTAGRAM_CACHE_DURATION) {
+        return res.json(instagramCache.data);
+    }
+
+    try {
+        const response = await fetch(
+            'https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp&limit=5&access_token=' + token
+        );
+        const result = await response.json();
+
+        if (result.error) {
+            console.error('Erreur Instagram API:', result.error.message);
+            // Retourner le cache meme expire si l'API echoue
+            if (instagramCache.data) return res.json(instagramCache.data);
+            return res.json([]);
+        }
+
+        const posts = (result.data || []).map(post => ({
+            id: post.id,
+            caption: post.caption || '',
+            mediaType: post.media_type,
+            mediaUrl: post.media_url,
+            thumbnailUrl: post.thumbnail_url || post.media_url,
+            permalink: post.permalink,
+            timestamp: post.timestamp
+        }));
+
+        // Mettre en cache
+        instagramCache = { data: posts, timestamp: Date.now() };
+        res.json(posts);
+    } catch (error) {
+        console.error('Erreur fetch Instagram:', error.message);
+        if (instagramCache.data) return res.json(instagramCache.data);
+        res.json([]);
+    }
+});
+
 // ==================== API CONTACT ====================
 
 app.post('/api/contact', (req, res) => {

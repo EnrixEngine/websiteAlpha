@@ -12677,7 +12677,7 @@
                 container.innerHTML = html;
             } catch (error) {
                 console.error('Erreur chargement utilisateurs:', error);
-                container.innerHTML = '<p style="color: #f87171;">Erreur lors du chargement des utilisateurs</p>';
+                container.innerHTML = '<p style="color: #f87171;">Erreur lors du chargement des utilisateurs: ' + (error.message || 'Erreur inconnue') + '</p>';
             }
         }
 
@@ -16154,6 +16154,22 @@
         function loadInstagramPosts() {
             var config = JSON.parse(localStorage.getItem('alphamouv_config')) || {};
             const posts = config.instagramPosts || [];
+
+            // Migration : supprimer les images base64 des anciens posts (libère le localStorage)
+            var needsSave = false;
+            posts.forEach(function(post) {
+                if (post.image && post.image.startsWith('data:')) {
+                    delete post.image;
+                    needsSave = true;
+                }
+            });
+            if (needsSave) {
+                try {
+                    config.instagramPosts = posts;
+                    localStorage.setItem('alphamouv_config', JSON.stringify(config));
+                    console.log('Migration: images base64 Instagram supprimées du localStorage');
+                } catch(e) { /* ignore */ }
+            }
 
             const grid = document.getElementById('instagramPostsGrid');
             const noPostsMsg = document.getElementById('noInstagramPosts');

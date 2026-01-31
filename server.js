@@ -1473,12 +1473,17 @@ app.get('/api/admin/users', authenticateToken, isAdmin, (req, res) => {
     try {
         const users = dbAll('SELECT id, email, nom, prenom, role, created_at FROM users ORDER BY created_at DESC');
         // Dechiffrer les emails pour l'affichage admin
-        res.json((users || []).map(u => ({
-            ...u,
-            email: decryptData(u.email)
-        })));
+        const decryptedUsers = (users || []).map(u => {
+            try {
+                return { ...u, email: decryptData(u.email) };
+            } catch (e) {
+                return { ...u, email: u.email };
+            }
+        });
+        res.json(decryptedUsers);
     } catch (error) {
-        res.status(500).json({ error: 'Erreur serveur' });
+        console.error('Erreur chargement utilisateurs:', error);
+        res.status(500).json({ error: 'Erreur serveur: ' + error.message });
     }
 });
 

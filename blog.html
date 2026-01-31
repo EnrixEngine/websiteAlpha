@@ -1934,6 +1934,142 @@
             line-height: 1.7;
         }
 
+        /* Carrousel À la une */
+        .featured-carousel {
+            position: relative;
+            margin: 30px auto 40px;
+        }
+
+        .featured-carousel-track {
+            position: relative;
+            overflow: hidden;
+            border-radius: 24px;
+        }
+
+        .featured-carousel-track .blog-featured {
+            margin: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.6s ease, transform 0.6s ease;
+            transform: scale(0.98);
+        }
+
+        .featured-carousel-track .blog-featured:first-child {
+            position: relative;
+        }
+
+        .featured-carousel-track .blog-featured.featured-active {
+            opacity: 1;
+            pointer-events: all;
+            transform: scale(1);
+            z-index: 2;
+        }
+
+        /* Section badge coloré dans le featured */
+        .featured-section-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.75em;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-left: 10px;
+            text-transform: uppercase;
+            font-family: 'Montserrat', sans-serif;
+            vertical-align: middle;
+        }
+
+        .featured-section-badge.section-evenements {
+            background: rgba(65, 105, 225, 0.3);
+            color: #93c5fd;
+        }
+        .featured-section-badge.section-creations {
+            background: rgba(221, 172, 11, 0.3);
+            color: #ddac0b;
+        }
+        .featured-section-badge.section-art {
+            background: rgba(196, 209, 12, 0.3);
+            color: #c4d10c;
+        }
+        .featured-section-badge.section-histoire {
+            background: rgba(180, 100, 220, 0.3);
+            color: #d4a0f0;
+        }
+
+        /* Lien "Voir plus" dans featured */
+        .featured-link {
+            color: #ddac0b;
+            font-size: 0.9em;
+            margin-top: 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            transition: gap 0.3s ease;
+        }
+
+        .blog-featured:hover .featured-link {
+            gap: 10px;
+        }
+
+        /* Indicateurs du carrousel featured */
+        .featured-indicators {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .featured-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1.5px solid rgba(221, 172, 11, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 0;
+        }
+
+        .featured-dot.active {
+            background: #ddac0b;
+            border-color: #ddac0b;
+            box-shadow: 0 0 8px rgba(221, 172, 11, 0.5);
+            width: 28px;
+            border-radius: 5px;
+        }
+
+        .featured-dot:hover:not(.active) {
+            background: rgba(221, 172, 11, 0.4);
+            border-color: rgba(221, 172, 11, 0.6);
+        }
+
+        /* Badge "Nouveau" pour les modifications récentes */
+        .featured-new-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            background: linear-gradient(135deg, #ff6b35, #ff4444);
+            color: #fff;
+            font-size: 0.7em;
+            font-weight: 700;
+            border-radius: 50px;
+            margin-left: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            vertical-align: middle;
+            animation: newPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes newPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(255, 68, 68, 0); }
+        }
+
         /* Grille de cartes blog */
         .gallery {
             display: grid;
@@ -2906,6 +3042,16 @@
             .blog-featured .featured-content h2 {
                 font-size: 1.4em;
             }
+            .featured-carousel {
+                margin: 20px auto 30px;
+            }
+            .featured-indicators {
+                gap: 8px;
+                margin-top: 12px;
+            }
+            .featured-dot.active {
+                width: 22px;
+            }
             /* Section contact */
             .contact-section {
                 padding: 25px 15px;
@@ -3033,6 +3179,17 @@
             }
             .blog-featured .featured-content p {
                 font-size: 0.95em;
+            }
+            .featured-section-badge {
+                font-size: 0.65em;
+                padding: 3px 8px;
+            }
+            .featured-dot {
+                width: 8px;
+                height: 8px;
+            }
+            .featured-dot.active {
+                width: 20px;
             }
             .contact-section h2 {
                 font-size: 1.5em;
@@ -7815,23 +7972,88 @@
                 </div>
             </div>
 
-            <!-- Article à la une -->
-            <div class="blog-featured" onclick="navigateToSection('creations', 'card1')">
-                <div class="blog-featured-inner">
-                    <div class="featured-image">
-                        <img src="images/1000007798.jpg" alt="Dernière création">
+            <!-- Carrousel À la une -->
+            <div class="featured-carousel" id="featuredCarousel">
+                <div class="featured-carousel-track" id="featuredTrack">
+                    <!-- Slide Événements -->
+                    <div class="blog-featured featured-active" data-featured-section="evenements" data-featured-card="event1" onclick="navigateToSection('evenements', 'event1')">
+                        <div class="blog-featured-inner">
+                            <div class="featured-image">
+                                <img src="images/1000007790.jpg" alt="Expositions à venir">
+                            </div>
+                            <div class="featured-content">
+                                <span class="card-badge badge-featured">À la une <span class="featured-section-badge section-evenements">Événement</span></span>
+                                <h2>Expositions à venir</h2>
+                                <p>Découvrez mes prochaines expositions et vernissages où je présenterai mes dernières créations.</p>
+                                <span class="featured-link">
+                                    Voir les événements
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 16px; height: 16px;"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="featured-content">
-                        <span class="card-badge badge-featured">À la une</span>
-                        <h2>Découvrez mes dernières créations</h2>
-                        <p>Des pièces uniques qui fusionnent mode et expression artistique. Chaque vêtement raconte une histoire, porte une émotion, transmet un message.</p>
-                        <span style="color: #ddac0b; font-size: 0.9em; margin-top: 16px; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
-                            Voir les créations
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 16px; height: 16px;">
-                                <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
-                            </svg>
-                        </span>
+
+                    <!-- Slide Créations -->
+                    <div class="blog-featured" data-featured-section="creations" data-featured-card="card1" onclick="navigateToSection('creations', 'card1')">
+                        <div class="blog-featured-inner">
+                            <div class="featured-image">
+                                <img src="images/1000007798.jpg" alt="Art Vestimentaire">
+                            </div>
+                            <div class="featured-content">
+                                <span class="card-badge badge-featured">À la une <span class="featured-section-badge section-creations">Création</span></span>
+                                <h2>Art Vestimentaire</h2>
+                                <p>Des pièces uniques qui fusionnent mode et expression artistique. Chaque vêtement raconte une histoire.</p>
+                                <span class="featured-link">
+                                    Voir les créations
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 16px; height: 16px;"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+                                </span>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- Slide Art -->
+                    <div class="blog-featured" data-featured-section="art" data-featured-card="card4" onclick="navigateToSection('art', 'card4')">
+                        <div class="blog-featured-inner">
+                            <div class="featured-image">
+                                <img src="images/1000007790.jpg" alt="Expression Personnelle">
+                            </div>
+                            <div class="featured-content">
+                                <span class="card-badge badge-featured">À la une <span class="featured-section-badge section-art">Art</span></span>
+                                <h2>Expression Personnelle</h2>
+                                <p>L'art comme moyen d'exprimer mes émotions et mon vécu. Chaque œuvre est un fragment de mon âme.</p>
+                                <span class="featured-link">
+                                    Voir Art & Expression
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 16px; height: 16px;"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slide Histoire -->
+                    <div class="blog-featured" data-featured-section="histoire" data-featured-card="card7" onclick="navigateToSection('histoire', 'card7')">
+                        <div class="blog-featured-inner">
+                            <div class="featured-image">
+                                <img src="images/1000007798.jpg" alt="Mon Parcours">
+                            </div>
+                            <div class="featured-content">
+                                <span class="card-badge badge-featured">À la une <span class="featured-section-badge section-histoire">Histoire</span></span>
+                                <h2>Mon Parcours</h2>
+                                <p>Les épreuves qui m'ont construit et inspiré. Chaque obstacle surmonté est devenu une source d'inspiration.</p>
+                                <span class="featured-link">
+                                    Voir Mon Histoire
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 16px; height: 16px;"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Indicateurs -->
+                <div class="featured-indicators" id="featuredIndicators">
+                    <button class="featured-dot active" onclick="goToFeaturedSlide(0)" aria-label="Événements"></button>
+                    <button class="featured-dot" onclick="goToFeaturedSlide(1)" aria-label="Créations"></button>
+                    <button class="featured-dot" onclick="goToFeaturedSlide(2)" aria-label="Art"></button>
+                    <button class="featured-dot" onclick="goToFeaturedSlide(3)" aria-label="Histoire"></button>
                 </div>
             </div>
 
@@ -8600,12 +8822,152 @@
             const navLink = document.querySelector('.nav-link[data-section="' + sectionId + '"]');
             if (navLink) {
                 navLink.click();
-                // Ouvrir le popup de la carte après la transition
                 if (cardId) {
                     setTimeout(function() {
                         openCardPopup(cardId);
                     }, 400);
                 }
+            }
+        }
+
+        // ============ CARROUSEL À LA UNE ============
+        var featuredCurrentIndex = 0;
+        var featuredAutoPlayTimer = null;
+        var featuredSlides = [];
+        var featuredDots = [];
+
+        function initFeaturedCarousel() {
+            featuredSlides = document.querySelectorAll('#featuredTrack .blog-featured');
+            featuredDots = document.querySelectorAll('#featuredIndicators .featured-dot');
+            if (featuredSlides.length === 0) return;
+
+            // Réordonner les slides selon les modifications récentes
+            reorderFeaturedByRecent();
+
+            // Démarrer l'auto-play
+            startFeaturedAutoPlay();
+        }
+
+        function goToFeaturedSlide(index) {
+            if (index < 0 || index >= featuredSlides.length) return;
+            featuredCurrentIndex = index;
+
+            featuredSlides.forEach(function(slide) {
+                slide.classList.remove('featured-active');
+            });
+            featuredDots.forEach(function(dot) {
+                dot.classList.remove('active');
+            });
+
+            featuredSlides[index].classList.add('featured-active');
+            if (featuredDots[index]) featuredDots[index].classList.add('active');
+
+            // Restart auto-play timer
+            restartFeaturedAutoPlay();
+        }
+
+        function nextFeaturedSlide() {
+            var next = (featuredCurrentIndex + 1) % featuredSlides.length;
+            goToFeaturedSlide(next);
+        }
+
+        function startFeaturedAutoPlay() {
+            if (featuredAutoPlayTimer) clearInterval(featuredAutoPlayTimer);
+            featuredAutoPlayTimer = setInterval(nextFeaturedSlide, 6000);
+        }
+
+        function restartFeaturedAutoPlay() {
+            if (featuredAutoPlayTimer) clearInterval(featuredAutoPlayTimer);
+            featuredAutoPlayTimer = setInterval(nextFeaturedSlide, 6000);
+        }
+
+        // Réordonner les slides : les plus récemment modifiées en premier
+        function reorderFeaturedByRecent() {
+            var config = JSON.parse(localStorage.getItem('alphamouv_config')) || {};
+            var recentChanges = config.featuredPriority || {};
+
+            // Construire un tableau avec les timestamps
+            var slidesArray = Array.from(featuredSlides);
+            var track = document.getElementById('featuredTrack');
+
+            slidesArray.sort(function(a, b) {
+                var sectionA = a.getAttribute('data-featured-section');
+                var sectionB = b.getAttribute('data-featured-section');
+                var timeA = recentChanges[sectionA] || 0;
+                var timeB = recentChanges[sectionB] || 0;
+                return timeB - timeA; // Plus récent en premier
+            });
+
+            // Réinsérer dans l'ordre
+            slidesArray.forEach(function(slide) {
+                track.appendChild(slide);
+            });
+
+            // Mettre à jour les références
+            featuredSlides = document.querySelectorAll('#featuredTrack .blog-featured');
+
+            // Activer le premier slide
+            featuredSlides.forEach(function(s) { s.classList.remove('featured-active'); });
+            featuredDots.forEach(function(d) { d.classList.remove('active'); });
+            if (featuredSlides[0]) featuredSlides[0].classList.add('featured-active');
+            if (featuredDots[0]) featuredDots[0].classList.add('active');
+            featuredCurrentIndex = 0;
+
+            // Mettre à jour le data des dots pour correspondre au nouvel ordre
+            featuredSlides.forEach(function(slide, i) {
+                if (featuredDots[i]) {
+                    var section = slide.getAttribute('data-featured-section');
+                    featuredDots[i].setAttribute('aria-label', section);
+                }
+            });
+
+            // Ajouter badge "Nouveau" si modifié récemment (< 24h)
+            var now = Date.now();
+            featuredSlides.forEach(function(slide) {
+                var section = slide.getAttribute('data-featured-section');
+                var lastChange = recentChanges[section] || 0;
+                var badge = slide.querySelector('.card-badge');
+                // Supprimer ancien badge nouveau
+                var existing = slide.querySelector('.featured-new-badge');
+                if (existing) existing.remove();
+                // Ajouter si < 24h
+                if (lastChange && (now - lastChange) < 86400000 && badge) {
+                    var newBadge = document.createElement('span');
+                    newBadge.className = 'featured-new-badge';
+                    newBadge.textContent = 'Nouveau';
+                    badge.appendChild(newBadge);
+                }
+            });
+        }
+
+        // Marquer une section comme récemment modifiée (appelé par l'admin)
+        function markSectionAsUpdated(sectionName) {
+            var config = JSON.parse(localStorage.getItem('alphamouv_config')) || {};
+            if (!config.featuredPriority) config.featuredPriority = {};
+            config.featuredPriority[sectionName] = Date.now();
+            localStorage.setItem('alphamouv_config', JSON.stringify(config));
+            // Mettre à jour le carrousel si on est sur l'accueil
+            if (featuredSlides.length > 0) {
+                reorderFeaturedByRecent();
+                restartFeaturedAutoPlay();
+            }
+        }
+
+        // Mettre à jour le contenu d'un slide featured depuis les données admin
+        function updateFeaturedSlide(sectionName, title, description, image) {
+            var slide = document.querySelector('.blog-featured[data-featured-section="' + sectionName + '"]');
+            if (!slide) return;
+            if (title) {
+                var h2 = slide.querySelector('.featured-content h2');
+                if (h2) h2.textContent = title;
+            }
+            if (description) {
+                var p = slide.querySelector('.featured-content p');
+                if (p) p.textContent = description;
+            }
+            if (image) {
+                var img = slide.querySelector('.featured-image img');
+                if (img) img.src = image;
             }
         }
 
@@ -9744,6 +10106,9 @@
 
             // Appliquer les liens sociaux sauvegardés
             applySavedSocialLinks();
+
+            // Initialiser le carrousel À la une
+            initFeaturedCarousel();
 
             // Afficher le bandeau cookies si nécessaire
             showCookieBanner();
@@ -13898,6 +14263,11 @@
                 closeEditorModal();
                 loadCardsSection();
 
+                // Marquer la section comme récemment modifiée pour le carrousel À la une
+                markSectionAsUpdated(section);
+                // Mettre à jour le slide featured correspondant
+                updateFeaturedSlide(section, title, description, image);
+
                 alert(isNew ? 'Carte ajoutée avec succès !' : 'Carte mise à jour avec succès !');
                 return;
             }
@@ -15399,7 +15769,14 @@
             };
             
             localStorage.setItem('alphamouv_config', JSON.stringify(config));
-            
+
+            // Identifier la section de cette carte et marquer comme modifiée
+            var cardSectionMap = { card1: 'creations', card2: 'creations', card3: 'creations', card4: 'art', card5: 'art', card6: 'art', card7: 'histoire', card8: 'histoire', card9: 'histoire', event1: 'evenements', event2: 'evenements', event3: 'evenements' };
+            var mappedSection = cardSectionMap[currentPopupCardId];
+            if (mappedSection) {
+                markSectionAsUpdated(mappedSection);
+            }
+
             closeEditorModal();
             addLog('success', 'Cadre modifié: ' + config.cardsData[currentPopupCardId].title);
             alert(' Cadre mis à jour avec succès !');
@@ -15667,6 +16044,10 @@
                 eventElement.querySelector('.event-status').textContent = newData.status;
                 eventElement.querySelector('.event-date').textContent = newData.date;
             }
+
+            // Marquer les événements comme récemment modifiés pour le carrousel À la une
+            markSectionAsUpdated('evenements');
+            updateFeaturedSlide('evenements', newData.title, newData.description, null);
 
             // Log et notification
             addLog('success', 'Événement modifié: ' + newData.title);

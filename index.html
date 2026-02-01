@@ -339,109 +339,85 @@
             75% { transform: translateY(-40px) translateX(-15px); opacity: 0.5; }
         }
 
-        /* Animation portail au clic */
-        .portal-overlay {
+        /* Animation de transition - vagues en cascade */
+        .wave-transition {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: #0a0a1a;
             z-index: 10000;
             pointer-events: none;
-            clip-path: circle(0% at 50% 50%);
-            overflow: hidden;
         }
 
-        .portal-overlay::before {
-            content: '';
+        .wave-layer {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: radial-gradient(circle at var(--click-x, 50%) var(--click-y, 50%),
-                rgba(221, 172, 11, 0.4) 0%,
-                rgba(221, 172, 11, 0.15) 25%,
-                rgba(13, 26, 45, 0.8) 50%,
-                #0a0a1a 100%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            transform: translateX(-100%);
         }
 
-        .portal-overlay.animate::before {
-            opacity: 1;
-            animation: portalGlow 0.7s ease-out forwards;
+        .wave-layer-1 {
+            background: rgba(221, 172, 11, 0.15);
+        }
+        .wave-layer-2 {
+            background: #0d1a2d;
+        }
+        .wave-layer-3 {
+            background: #0a0a1a;
         }
 
-        .portal-overlay::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 200%;
-            height: 200%;
-            transform: translate(-50%, -50%);
-            background: conic-gradient(
-                from 0deg,
-                transparent 0%,
-                rgba(221, 172, 11, 0.08) 10%,
-                transparent 20%,
-                rgba(221, 172, 11, 0.05) 30%,
-                transparent 40%,
-                rgba(221, 172, 11, 0.08) 50%,
-                transparent 60%,
-                rgba(221, 172, 11, 0.05) 70%,
-                transparent 80%,
-                rgba(221, 172, 11, 0.08) 90%,
-                transparent 100%
-            );
-            opacity: 0;
+        /* Direction gauche vers droite */
+        .wave-transition.to-right .wave-layer {
+            transform: translateX(-100%);
+        }
+        .wave-transition.to-right.animate .wave-layer-1 {
+            animation: waveSlideRight 0.6s cubic-bezier(0.7, 0, 0.3, 1) forwards;
+        }
+        .wave-transition.to-right.animate .wave-layer-2 {
+            animation: waveSlideRight 0.6s cubic-bezier(0.7, 0, 0.3, 1) 0.08s forwards;
+        }
+        .wave-transition.to-right.animate .wave-layer-3 {
+            animation: waveSlideRight 0.6s cubic-bezier(0.7, 0, 0.3, 1) 0.16s forwards;
         }
 
-        .portal-overlay.animate::after {
-            animation: portalSpin 0.8s ease-out forwards;
+        /* Direction droite vers gauche */
+        .wave-transition.to-left .wave-layer {
+            transform: translateX(100%);
+        }
+        .wave-transition.to-left.animate .wave-layer-1 {
+            animation: waveSlideLeft 0.6s cubic-bezier(0.7, 0, 0.3, 1) forwards;
+        }
+        .wave-transition.to-left.animate .wave-layer-2 {
+            animation: waveSlideLeft 0.6s cubic-bezier(0.7, 0, 0.3, 1) 0.08s forwards;
+        }
+        .wave-transition.to-left.animate .wave-layer-3 {
+            animation: waveSlideLeft 0.6s cubic-bezier(0.7, 0, 0.3, 1) 0.16s forwards;
         }
 
-        .portal-overlay.animate {
-            animation: circleOpen 0.6s ease-out forwards;
-        }
-
-        @keyframes circleOpen {
+        @keyframes waveSlideRight {
             0% {
-                clip-path: circle(0% at var(--click-x) var(--click-y));
-            }
-            100% {
-                clip-path: circle(150% at var(--click-x) var(--click-y));
-            }
-        }
-
-        @keyframes portalGlow {
-            0% {
-                opacity: 0;
-                transform: scale(0.8);
+                clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
             }
             50% {
-                opacity: 1;
-                transform: scale(1.05);
+                clip-path: polygon(0 0, 75% 0, 60% 50%, 75% 100%, 0 100%);
             }
             100% {
-                opacity: 0.6;
-                transform: scale(1);
+                clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
             }
         }
 
-        @keyframes portalSpin {
+        @keyframes waveSlideLeft {
             0% {
-                opacity: 0;
-                transform: translate(-50%, -50%) rotate(0deg) scale(0.5);
+                clip-path: polygon(100% 0, 100% 0, 100% 100%, 100% 100%);
             }
-            40% {
-                opacity: 0.6;
+            50% {
+                clip-path: polygon(25% 0, 100% 0, 100% 100%, 25% 100%, 40% 50%);
             }
             100% {
-                opacity: 0;
-                transform: translate(-50%, -50%) rotate(90deg) scale(1.5);
+                clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
             }
         }
 
@@ -637,8 +613,12 @@
         </div>
     </div>
 
-    <!-- Overlay pour l'animation portail -->
-    <div id="portal-overlay" class="portal-overlay"></div>
+    <!-- Overlay pour l'animation de transition en vagues -->
+    <div id="waveTransition" class="wave-transition">
+        <div class="wave-layer wave-layer-1"></div>
+        <div class="wave-layer wave-layer-2"></div>
+        <div class="wave-layer wave-layer-3"></div>
+    </div>
 
 
     <!-- Footer -->
@@ -702,48 +682,42 @@
             sideRight.querySelector('.side-bg').style.opacity = '1';
         });
 
-        // Animation portail au clic
-        const portalOverlay = document.getElementById('portal-overlay');
+        // Animation de transition en vagues
+        const waveTransition = document.getElementById('waveTransition');
 
-        // Fonction pour reinitialiser l'overlay
-        function resetPortal() {
-            portalOverlay.classList.remove('animate');
-            portalOverlay.style.removeProperty('--click-x');
-            portalOverlay.style.removeProperty('--click-y');
+        // Reinitialiser la transition
+        function resetWaves() {
+            waveTransition.classList.remove('animate', 'to-left', 'to-right');
         }
 
-        // Reinitialiser au chargement initial
-        resetPortal();
+        resetWaves();
 
         // Reinitialiser lors du retour arriere (bfcache)
         window.addEventListener('pageshow', function(event) {
             if (event.persisted) {
-                resetPortal();
+                resetWaves();
             }
         });
 
-        function triggerPortal(e, targetUrl) {
+        function triggerWaveTransition(e, targetUrl, direction) {
             e.preventDefault();
 
-            // Position du clic en pourcentage
-            const x = (e.clientX / window.innerWidth) * 100;
-            const y = (e.clientY / window.innerHeight) * 100;
-
-            // Preparer les variables CSS
-            portalOverlay.style.setProperty('--click-x', x + '%');
-            portalOverlay.style.setProperty('--click-y', y + '%');
+            // Definir la direction des vagues
+            waveTransition.classList.add(direction);
 
             // Lancer l'animation
-            portalOverlay.classList.add('animate');
+            waveTransition.classList.add('animate');
 
             // Rediriger apres l'animation
             setTimeout(() => {
                 window.location.href = targetUrl;
-            }, 550);
+            }, 650);
         }
 
-        sideLeft.addEventListener('click', (e) => triggerPortal(e, 'blog.html'));
-        sideRight.addEventListener('click', (e) => triggerPortal(e, 'boutique.html'));
+        // Portfolio (gauche) → vagues de gauche a droite
+        sideLeft.addEventListener('click', (e) => triggerWaveTransition(e, 'blog.html', 'to-right'));
+        // Boutique (droite) → vagues de droite a gauche
+        sideRight.addEventListener('click', (e) => triggerWaveTransition(e, 'boutique.html', 'to-left'));
     </script>
 </body>
 </html>

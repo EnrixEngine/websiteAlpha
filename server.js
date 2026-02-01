@@ -227,7 +227,7 @@ app.use(helmet({
             defaultSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com", "https://accounts.google.com", "https://cdn.tailwindcss.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://accounts.google.com", "https://www.instagram.com", "https://js.stripe.com", "https://www.paypal.com", "https://cdn.tailwindcss.com"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://accounts.google.com", "https://www.instagram.com", "https://js.stripe.com", "https://www.paypal.com", "https://cdn.tailwindcss.com", "https://cdnjs.cloudflare.com"],
             scriptSrcAttr: ["'unsafe-inline'"],
             imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
             connectSrc: ["'self'", "https://accounts.google.com", "https://www.instagram.com", "https://res.cloudinary.com", "https://api.stripe.com", "https://www.paypal.com"],

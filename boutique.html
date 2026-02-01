@@ -7495,26 +7495,6 @@
             localStorage.setItem('boutique_last_backup', new Date().getTime().toString());
 
             console.log('✅ Backup localStorage créée');
-
-            // Envoyer aussi au script PHP pour créer le fichier de backup
-            fetch('backup/create_backup.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ config: config })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    console.log('✅ Backup fichier créée:', data.filename);
-                } else {
-                    console.error('❌ Erreur lors de la création de la backup fichier:', data.error);
-                }
-            })
-            .catch(error => {
-                console.error('❌ Erreur réseau lors de la backup:', error);
-            });
         }
 
         document.addEventListener('DOMContentLoaded', function() {

@@ -590,13 +590,13 @@
     <!-- Particules -->
     <div class="particles" id="particles"></div>
 
-    <!-- Previews (en arriere-plan) -->
+    <!-- Previews (en arriere-plan, charges uniquement sur desktop) -->
     <div class="preview-container preview-left" id="preview-left">
-        <iframe src="blog.html" class="preview-iframe" loading="lazy"></iframe>
+        <iframe data-src="blog.html" class="preview-iframe" loading="lazy"></iframe>
         <div class="preview-overlay"></div>
     </div>
     <div class="preview-container preview-right" id="preview-right">
-        <iframe src="boutique.html" class="preview-iframe" loading="lazy"></iframe>
+        <iframe data-src="boutique.html" class="preview-iframe" loading="lazy"></iframe>
         <div class="preview-overlay"></div>
     </div>
 
@@ -666,6 +666,16 @@
             particle.style.animationDuration = (Math.random() * 15 + 15) + 's';
 
             particlesContainer.appendChild(particle);
+        }
+
+        // Charger les iframes de preview uniquement sur desktop (hover capable)
+        const isDesktop = window.matchMedia('(hover: hover)').matches && window.innerWidth > 768;
+        if (isDesktop) {
+            document.querySelectorAll('.preview-iframe').forEach(function(iframe) {
+                if (iframe.dataset.src) {
+                    iframe.src = iframe.dataset.src;
+                }
+            });
         }
 
         // Gestion des previews au survol

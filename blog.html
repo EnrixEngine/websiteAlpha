@@ -3081,7 +3081,7 @@
 
         @media (max-width: 768px) {
             h1 {
-                font-size: 3em;
+                font-size: 3.5em;
                 letter-spacing: 3px;
             }
             .title-decoration {
@@ -3253,7 +3253,7 @@
 
         @media (max-width: 480px) {
             h1 {
-                font-size: 2.2em;
+                font-size: 2.8em;
                 letter-spacing: 2px;
             }
             .title-decoration {
@@ -8075,7 +8075,7 @@
         <!-- Navigation -->
         <div class="nav-wrapper">
             <!-- Hamburger mobile -->
-            <button class="mobile-hamburger" id="mobileHamburger" onclick="toggleMobileNav()">
+            <button class="mobile-hamburger" id="mobileHamburger">
                 <span></span>
                 <span></span>
                 <span></span>
@@ -8098,7 +8098,7 @@
         </div>
 
         <!-- Mobile nav drawer -->
-        <div class="mobile-nav-overlay" id="mobileNavOverlay" onclick="closeMobileNav()"></div>
+        <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
         <div class="mobile-nav-drawer" id="mobileNavDrawer">
             <div class="drawer-header">B.A.B</div>
             <a href="#" class="mobile-nav-link active" data-section="home">Accueil</a>
@@ -8656,8 +8656,6 @@
         </footer>
     </div>
 
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
     <script>
         // Génération de particules animées
         const particlesContainer = document.getElementById('particles');
@@ -9030,29 +9028,31 @@
         // Note: attachNavEvents() sera appelé après applyNavOrder() dans DOMContentLoaded
 
         // Mobile nav drawer toggle
+        var mobileHamburgerBtn = document.getElementById('mobileHamburger');
+        var mobileNavOverlayEl = document.getElementById('mobileNavOverlay');
+        var mobileNavDrawerEl = document.getElementById('mobileNavDrawer');
+
         function toggleMobileNav() {
-            const hamburger = document.getElementById('mobileHamburger');
-            const overlay = document.getElementById('mobileNavOverlay');
-            const drawer = document.getElementById('mobileNavDrawer');
-            hamburger.classList.toggle('active');
-            overlay.classList.toggle('active');
-            drawer.classList.toggle('active');
+            mobileHamburgerBtn.classList.toggle('active');
+            mobileNavOverlayEl.classList.toggle('active');
+            mobileNavDrawerEl.classList.toggle('active');
         }
 
         function closeMobileNav() {
-            const hamburger = document.getElementById('mobileHamburger');
-            const overlay = document.getElementById('mobileNavOverlay');
-            const drawer = document.getElementById('mobileNavDrawer');
-            hamburger.classList.remove('active');
-            overlay.classList.remove('active');
-            drawer.classList.remove('active');
+            mobileHamburgerBtn.classList.remove('active');
+            mobileNavOverlayEl.classList.remove('active');
+            mobileNavDrawerEl.classList.remove('active');
         }
+
+        // Attach events
+        mobileHamburgerBtn.addEventListener('click', toggleMobileNav);
+        mobileNavOverlayEl.addEventListener('click', closeMobileNav);
 
         // Mobile drawer link clicks → navigate to section + close drawer
         document.querySelectorAll('.mobile-nav-link').forEach(function(link) {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
-                const sectionId = this.getAttribute('data-section');
+                var sectionId = this.getAttribute('data-section');
 
                 // Update active state on mobile links
                 document.querySelectorAll('.mobile-nav-link').forEach(function(l) { l.classList.remove('active'); });
@@ -9060,17 +9060,17 @@
 
                 // Also update the desktop nav active state
                 document.querySelectorAll('.nav-link').forEach(function(l) { l.classList.remove('active'); });
-                const desktopLink = document.querySelector('.nav-link[data-section="' + sectionId + '"]');
+                var desktopLink = document.querySelector('.nav-link[data-section="' + sectionId + '"]');
                 if (desktopLink) desktopLink.classList.add('active');
 
                 // Navigate to section
-                const targetIndex = sectionIds.indexOf(sectionId);
-                const direction = targetIndex > currentSectionIndex ? 'right' : 'left';
-                const contentSections = document.querySelectorAll('.content-section');
+                var targetIndex = sectionIds.indexOf(sectionId);
+                var direction = targetIndex > currentSectionIndex ? 'right' : 'left';
+                var contentSections = document.querySelectorAll('.content-section');
                 contentSections.forEach(function(section) {
                     section.classList.remove('active', 'slide-in-right', 'slide-in-left');
                 });
-                const targetSection = document.getElementById(sectionId);
+                var targetSection = document.getElementById(sectionId);
                 if (targetSection) {
                     targetSection.classList.add('active');
                     targetSection.classList.add(direction === 'right' ? 'slide-in-right' : 'slide-in-left');

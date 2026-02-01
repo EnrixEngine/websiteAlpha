@@ -2966,8 +2966,119 @@
                 transform: rotate(-2deg);
             }
         }
+
+        /* Mobile hamburger button */
+        .mobile-hamburger {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.25), rgba(37, 99, 235, 0.15));
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 2px solid rgba(221, 172, 11, 0.3);
+            border-radius: 12px;
+            cursor: pointer;
+            gap: 5px;
+            padding: 10px;
+            transition: all 0.3s ease;
+            z-index: 1001;
+        }
+        .mobile-hamburger:hover {
+            border-color: rgba(221, 172, 11, 0.6);
+            background: rgba(221, 172, 11, 0.15);
+        }
+        .mobile-hamburger span {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background: #ddac0b;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+        .mobile-hamburger.active span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+        .mobile-hamburger.active span:nth-child(2) {
+            opacity: 0;
+        }
+        .mobile-hamburger.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(5px, -5px);
+        }
+
+        /* Mobile nav drawer */
+        .mobile-nav-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9990;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .mobile-nav-overlay.active {
+            opacity: 1;
+        }
+        .mobile-nav-drawer {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: -280px;
+            width: 280px;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(10, 10, 26, 0.98), rgba(13, 26, 45, 0.98));
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border-right: 2px solid rgba(221, 172, 11, 0.3);
+            z-index: 9991;
+            transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            padding-top: 80px;
+        }
+        .mobile-nav-drawer.active {
+            left: 0;
+        }
+        .mobile-nav-drawer a {
+            display: block;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            padding: 16px 30px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.95em;
+            font-weight: 500;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+        .mobile-nav-drawer a:hover,
+        .mobile-nav-drawer a.active {
+            color: #ddac0b;
+            background: rgba(221, 172, 11, 0.1);
+            border-left-color: #ddac0b;
+        }
+        .mobile-nav-drawer a.active {
+            font-weight: 700;
+        }
+        .mobile-nav-drawer .drawer-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 25px;
+            border-bottom: 1px solid rgba(221, 172, 11, 0.2);
+            font-family: 'Cinzel', serif;
+            font-size: 1.3em;
+            color: #ddac0b;
+            letter-spacing: 3px;
+        }
+
         /* Responsive */
-        
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 3em;
@@ -3016,44 +3127,23 @@
                 width: 18px;
                 height: 18px;
             }
-            /* Navigation */
-            nav {
-                padding: 8px 5px;
-                max-width: calc(100% - 20px);
-                margin: 10px auto 0;
-                overflow: hidden;
+            /* Navigation - cacher sur mobile, montrer hamburger */
+            nav#mainNav {
+                display: none !important;
             }
-            nav ul {
-                gap: 5px;
-                flex-wrap: nowrap;
-                overflow-x: auto;
-                overflow-y: hidden;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: thin;
-                scrollbar-color: rgba(221, 172, 11, 0.5) transparent;
-                padding: 8px 5px;
-                margin: 0;
-                width: 100%;
-                justify-content: flex-start;
+            .nav-edit-btn {
+                display: none !important;
             }
-            nav ul::-webkit-scrollbar {
-                height: 4px;
+            .mobile-hamburger {
+                display: flex;
             }
-            nav ul::-webkit-scrollbar-track {
-                background: rgba(255, 255, 255, 0.1);
-                border-radius: 2px;
+            .mobile-nav-overlay,
+            .mobile-nav-drawer {
+                display: block;
             }
-            nav ul::-webkit-scrollbar-thumb {
-                background: rgba(221, 172, 11, 0.5);
-                border-radius: 2px;
-            }
-            nav li {
-                flex-shrink: 0;
-            }
-            nav a {
-                padding: 10px 14px;
-                font-size: 0.8em;
-                white-space: nowrap;
+            /* Admin - masquer sur mobile */
+            .admin-sidebar-toggle {
+                display: none !important;
             }
             /* Contenu principal */
             .main-card {
@@ -3126,30 +3216,6 @@
                 width: 100%;
                 max-width: 300px;
             }
-            /* Indicateur de scroll navigation */
-            nav {
-                position: relative;
-            }
-            nav::before,
-            nav::after {
-                content: '';
-                position: absolute;
-                top: 0;
-                bottom: 0;
-                width: 25px;
-                pointer-events: none;
-                z-index: 10;
-            }
-            nav::before {
-                left: 0;
-                background: linear-gradient(to right, rgba(30, 58, 138, 0.9), transparent);
-                border-radius: 50px 0 0 50px;
-            }
-            nav::after {
-                right: 0;
-                background: linear-gradient(to left, rgba(30, 58, 138, 0.9), transparent);
-                border-radius: 0 50px 50px 0;
-            }
             /* Icônes galerie */
             .gallery-item .icon {
                 font-size: 3em;
@@ -3209,18 +3275,6 @@
             .search-box.active {
                 width: 160px;
                 right: 40px;
-            }
-            nav {
-                margin: 8px auto 0;
-                padding: 6px 5px;
-                max-width: calc(100% - 10px);
-            }
-            nav ul {
-                padding: 6px 5px;
-            }
-            nav a {
-                padding: 8px 12px;
-                font-size: 0.72em;
             }
             .main-card {
                 padding: 20px 12px;
@@ -8020,6 +8074,12 @@
 
         <!-- Navigation -->
         <div class="nav-wrapper">
+            <!-- Hamburger mobile -->
+            <button class="mobile-hamburger" id="mobileHamburger" onclick="toggleMobileNav()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
             <button class="nav-edit-btn" id="navEditBtn" onclick="toggleNavEditMode()" style="display: none;" title="Modifier l'ordre de la navigation">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -8035,6 +8095,17 @@
                     <li data-nav-id="histoire"><a href="#" class="nav-link" data-section="histoire">Mon Histoire</a></li>
                 </ul>
             </nav>
+        </div>
+
+        <!-- Mobile nav drawer -->
+        <div class="mobile-nav-overlay" id="mobileNavOverlay" onclick="closeMobileNav()"></div>
+        <div class="mobile-nav-drawer" id="mobileNavDrawer">
+            <div class="drawer-header">B.A.B</div>
+            <a href="#" class="mobile-nav-link active" data-section="home">Accueil</a>
+            <a href="#" class="mobile-nav-link" data-section="evenements">Évènements</a>
+            <a href="#" class="mobile-nav-link" data-section="creations">Créations Uniques</a>
+            <a href="#" class="mobile-nav-link" data-section="art">Art & Expression</a>
+            <a href="#" class="mobile-nav-link" data-section="histoire">Mon Histoire</a>
         </div>
 
         <!-- Section Accueil -->
@@ -8927,6 +8998,11 @@
                     // Ajouter la classe active au lien cliqué
                     this.classList.add('active');
 
+                    // Sync mobile drawer active state
+                    document.querySelectorAll('.mobile-nav-link').forEach(function(ml) { ml.classList.remove('active'); });
+                    const mobileLink = document.querySelector('.mobile-nav-link[data-section="' + targetSectionId + '"]');
+                    if (mobileLink) mobileLink.classList.add('active');
+
                     // Cacher toutes les sections
                     contentSections.forEach(section => {
                         section.classList.remove('active', 'slide-in-right', 'slide-in-left');
@@ -8952,6 +9028,61 @@
         }
 
         // Note: attachNavEvents() sera appelé après applyNavOrder() dans DOMContentLoaded
+
+        // Mobile nav drawer toggle
+        function toggleMobileNav() {
+            const hamburger = document.getElementById('mobileHamburger');
+            const overlay = document.getElementById('mobileNavOverlay');
+            const drawer = document.getElementById('mobileNavDrawer');
+            hamburger.classList.toggle('active');
+            overlay.classList.toggle('active');
+            drawer.classList.toggle('active');
+        }
+
+        function closeMobileNav() {
+            const hamburger = document.getElementById('mobileHamburger');
+            const overlay = document.getElementById('mobileNavOverlay');
+            const drawer = document.getElementById('mobileNavDrawer');
+            hamburger.classList.remove('active');
+            overlay.classList.remove('active');
+            drawer.classList.remove('active');
+        }
+
+        // Mobile drawer link clicks → navigate to section + close drawer
+        document.querySelectorAll('.mobile-nav-link').forEach(function(link) {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const sectionId = this.getAttribute('data-section');
+
+                // Update active state on mobile links
+                document.querySelectorAll('.mobile-nav-link').forEach(function(l) { l.classList.remove('active'); });
+                this.classList.add('active');
+
+                // Also update the desktop nav active state
+                document.querySelectorAll('.nav-link').forEach(function(l) { l.classList.remove('active'); });
+                const desktopLink = document.querySelector('.nav-link[data-section="' + sectionId + '"]');
+                if (desktopLink) desktopLink.classList.add('active');
+
+                // Navigate to section
+                const targetIndex = sectionIds.indexOf(sectionId);
+                const direction = targetIndex > currentSectionIndex ? 'right' : 'left';
+                const contentSections = document.querySelectorAll('.content-section');
+                contentSections.forEach(function(section) {
+                    section.classList.remove('active', 'slide-in-right', 'slide-in-left');
+                });
+                const targetSection = document.getElementById(sectionId);
+                if (targetSection) {
+                    targetSection.classList.add('active');
+                    targetSection.classList.add(direction === 'right' ? 'slide-in-right' : 'slide-in-left');
+                }
+                currentSectionIndex = targetIndex;
+                createFloatingElements(sectionId);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                // Close mobile drawer
+                closeMobileNav();
+            });
+        });
 
         // Navigation programmatique vers une section (utilisé par l'article vedette)
         function navigateToSection(sectionId, cardId) {

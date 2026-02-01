@@ -7,221 +7,83 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Oswald:wght@400;500;700&family=Quicksand:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    gold: { 500: '#ddac0b', 400: '#f4d03f', 600: '#c4a00a' },
+                    lime: { 500: '#c4d10c' },
+                    dark: { 900: '#0a0a1a', 800: '#0d1a2d', 700: '#1a1a3a' },
+                    navy: { 800: '#1e3a8a', 600: '#2563eb' }
+                },
+                fontFamily: {
+                    heading: ['Cinzel', 'serif'],
+                    body: ['Montserrat', 'sans-serif'],
+                    display: ['Oswald', 'sans-serif'],
+                    text: ['Quicksand', 'sans-serif']
+                }
+            }
+        }
+    }
+    </script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Quicksand', sans-serif;
-            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0d0d2b 100%);
-            min-height: 100vh;
-            color: white;
-            line-height: 1.8;
-        }
-
-        .header {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 20px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid rgba(221, 172, 11, 0.3);
-        }
-
-        .logo {
-            font-family: 'Oswald', sans-serif;
-            font-size: 1.8em;
-            color: #ddac0b;
-            text-decoration: none;
-        }
-
-        .back-btn {
-            color: #ddac0b;
-            text-decoration: none;
-            padding: 10px 25px;
-            border: 2px solid #ddac0b;
-            border-radius: 25px;
-            transition: all 0.3s ease;
-        }
-
-        .back-btn:hover {
-            background: #ddac0b;
-            color: #0a0a1a;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 60px 40px;
-        }
-
-        h1 {
-            font-family: 'Oswald', sans-serif;
-            font-size: 2.5em;
-            color: #ddac0b;
-            margin-bottom: 40px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        h2 {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 1.4em;
-            color: #ddac0b;
-            margin: 40px 0 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(221, 172, 11, 0.3);
-        }
-
-        p {
-            color: rgba(255, 255, 255, 0.85);
-            margin-bottom: 15px;
-        }
-
-        .highlight {
-            background: rgba(221, 172, 11, 0.1);
-            padding: 20px;
-            border-radius: 10px;
-            border-left: 4px solid #ddac0b;
-            margin: 20px 0;
-        }
-
-        a {
-            color: #ddac0b;
-        }
-
-        footer {
-            text-align: center;
-            padding: 40px;
-            color: rgba(255, 255, 255, 0.5);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        /* Responsive tablette */
-        @media (max-width: 768px) {
-            .header {
-                padding: 15px 20px;
-            }
-            .logo {
-                font-size: 1.4em;
-            }
-            .back-btn {
-                padding: 8px 18px;
-                font-size: 0.9em;
-            }
-            .container {
-                padding: 40px 20px;
-            }
-            h1 {
-                font-size: 2em;
-                margin-bottom: 30px;
-                letter-spacing: 1px;
-            }
-            h2 {
-                font-size: 1.2em;
-                margin: 30px 0 15px;
-            }
-            .highlight {
-                padding: 15px;
-            }
-            footer {
-                padding: 25px 15px;
-            }
-        }
-
-        /* Responsive mobile */
-        @media (max-width: 480px) {
-            .header {
-                padding: 12px 15px;
-            }
-            .logo {
-                font-size: 1.2em;
-            }
-            .back-btn {
-                padding: 6px 14px;
-                font-size: 0.8em;
-            }
-            .container {
-                padding: 25px 15px;
-            }
-            h1 {
-                font-size: 1.5em;
-                margin-bottom: 20px;
-            }
-            h2 {
-                font-size: 1.1em;
-                margin: 25px 0 12px;
-            }
-            p {
-                font-size: 0.9em;
-                line-height: 1.7;
-            }
-            .highlight {
-                padding: 12px;
-                border-radius: 8px;
-            }
-            footer {
-                padding: 20px 10px;
-                font-size: 0.85em;
-            }
-        }
+        a { color: #ddac0b; }
     </style>
 </head>
-<body>
-    <header class="header">
-        <a href="index.html" class="logo">B.A.B</a>
-        <a href="index.html" class="back-btn">Retour a l'accueil</a>
+<body class="font-text bg-gradient-to-br from-dark-900 via-dark-700 to-[#0d0d2b] min-h-screen text-white leading-relaxed lg:leading-loose">
+    <header class="bg-black/30 px-4 py-3 sm:px-6 sm:py-4 md:px-10 md:py-5 flex justify-between items-center border-b border-gold-500/30">
+        <a href="index.html" class="font-display text-lg sm:text-xl md:text-2xl text-gold-500 no-underline">B.A.B</a>
+        <a href="index.html" class="text-gold-500 no-underline px-3 py-1.5 sm:px-5 sm:py-2.5 md:px-6 md:py-2.5 border-2 border-gold-500 rounded-full text-xs sm:text-sm md:text-base transition-all duration-300 hover:bg-gold-500 hover:text-dark-900">Retour a l'accueil</a>
     </header>
 
-    <div class="container">
-        <h1>Mentions Legales</h1>
+    <div class="max-w-[900px] mx-auto px-4 py-6 sm:px-6 sm:py-10 md:px-10 md:py-16">
+        <h1 class="font-display text-2xl sm:text-3xl md:text-4xl text-gold-500 mb-6 sm:mb-8 md:mb-10 uppercase tracking-wide sm:tracking-wider">Mentions Legales</h1>
 
-        <div class="highlight">
-            <p><strong>Derniere mise a jour :</strong> Janvier 2026</p>
+        <div class="bg-gold-500/10 p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl border-l-4 border-gold-500 my-4 md:my-5">
+            <p class="text-white/85 mb-3 text-sm sm:text-base"><strong>Derniere mise a jour :</strong> Janvier 2026</p>
         </div>
 
-        <h2>1. Editeur du site</h2>
-        <p>Le site B.A.B est edite par :</p>
-        <p><strong>B.A.B - B.A.B Empire Vision</strong></p>
-        <p>Artiste Createur - Auto-entrepreneur</p>
-        <p>Email : <a href="mailto:bab.empirevision@gmail.com">bab.empirevision@gmail.com</a></p>
+        <h2 class="font-body text-lg sm:text-xl md:text-xl text-gold-500 mt-6 sm:mt-8 md:mt-10 mb-3 sm:mb-4 md:mb-5 pb-2 border-b border-gold-500/30">1. Editeur du site</h2>
+        <p class="text-white/85 mb-3 text-sm sm:text-base">Le site B.A.B est edite par :</p>
+        <p class="text-white/85 mb-3 text-sm sm:text-base"><strong>B.A.B - B.A.B Empire Vision</strong></p>
+        <p class="text-white/85 mb-3 text-sm sm:text-base">Artiste Createur - Auto-entrepreneur</p>
+        <p class="text-white/85 mb-3 text-sm sm:text-base">Email : <a href="mailto:bab.empirevision@gmail.com">bab.empirevision@gmail.com</a></p>
 
-        <h2>2. Hebergement</h2>
-        <p>Le site est heberge par :</p>
-        <p>[A completer avec les informations de votre hebergeur]</p>
+        <h2 class="font-body text-lg sm:text-xl md:text-xl text-gold-500 mt-6 sm:mt-8 md:mt-10 mb-3 sm:mb-4 md:mb-5 pb-2 border-b border-gold-500/30">2. Hebergement</h2>
+        <p class="text-white/85 mb-3 text-sm sm:text-base">Le site est heberge par :</p>
+        <p class="text-white/85 mb-3 text-sm sm:text-base">[A completer avec les informations de votre hebergeur]</p>
 
-        <h2>3. Propriete intellectuelle</h2>
-        <p>L'ensemble du contenu de ce site (textes, images, creations artistiques, graphismes, logo, icones, etc.) est la propriete exclusive d'B.A.B, sauf mention contraire.</p>
-        <p>Toute reproduction, representation, modification, publication ou adaptation de tout ou partie des elements du site, quel que soit le moyen ou le procede utilise, est interdite, sauf autorisation ecrite prealable.</p>
+        <h2 class="font-body text-lg sm:text-xl md:text-xl text-gold-500 mt-6 sm:mt-8 md:mt-10 mb-3 sm:mb-4 md:mb-5 pb-2 border-b border-gold-500/30">3. Propriete intellectuelle</h2>
+        <p class="text-white/85 mb-3 text-sm sm:text-base">L'ensemble du contenu de ce site (textes, images, creations artistiques, graphismes, logo, icones, etc.) est la propriete exclusive d'B.A.B, sauf mention contraire.</p>
+        <p class="text-white/85 mb-3 text-sm sm:text-base">Toute reproduction, representation, modification, publication ou adaptation de tout ou partie des elements du site, quel que soit le moyen ou le procede utilise, est interdite, sauf autorisation ecrite prealable.</p>
 
-        <h2>4. Creations artistiques</h2>
-        <p>Toutes les oeuvres presentees sur ce site sont des creations originales protegees par le droit d'auteur. Elles ne peuvent etre reproduites, copiees ou utilisees sans l'accord explicite de l'artiste.</p>
+        <h2 class="font-body text-lg sm:text-xl md:text-xl text-gold-500 mt-6 sm:mt-8 md:mt-10 mb-3 sm:mb-4 md:mb-5 pb-2 border-b border-gold-500/30">4. Creations artistiques</h2>
+        <p class="text-white/85 mb-3 text-sm sm:text-base">Toutes les oeuvres presentees sur ce site sont des creations originales protegees par le droit d'auteur. Elles ne peuvent etre reproduites, copiees ou utilisees sans l'accord explicite de l'artiste.</p>
 
-        <h2>5. Donnees personnelles</h2>
-        <p>Les informations collectees sur ce site sont utilisees uniquement dans le cadre de la relation commerciale et ne sont jamais cedees a des tiers. Pour plus d'informations, consultez notre <a href="politique-confidentialite.html">Politique de confidentialite</a>.</p>
+        <h2 class="font-body text-lg sm:text-xl md:text-xl text-gold-500 mt-6 sm:mt-8 md:mt-10 mb-3 sm:mb-4 md:mb-5 pb-2 border-b border-gold-500/30">5. Donnees personnelles</h2>
+        <p class="text-white/85 mb-3 text-sm sm:text-base">Les informations collectees sur ce site sont utilisees uniquement dans le cadre de la relation commerciale et ne sont jamais cedees a des tiers. Pour plus d'informations, consultez notre <a href="politique-confidentialite.html">Politique de confidentialite</a>.</p>
 
-        <h2>6. Cookies</h2>
-        <p>Ce site utilise des cookies pour ameliorer l'experience utilisateur. En continuant votre navigation, vous acceptez l'utilisation de ces cookies.</p>
+        <h2 class="font-body text-lg sm:text-xl md:text-xl text-gold-500 mt-6 sm:mt-8 md:mt-10 mb-3 sm:mb-4 md:mb-5 pb-2 border-b border-gold-500/30">6. Cookies</h2>
+        <p class="text-white/85 mb-3 text-sm sm:text-base">Ce site utilise des cookies pour ameliorer l'experience utilisateur. En continuant votre navigation, vous acceptez l'utilisation de ces cookies.</p>
 
-        <h2>7. Responsabilite</h2>
-        <p>B.A.B s'efforce d'assurer l'exactitude des informations diffusees sur ce site. Toutefois, il ne saurait etre tenu responsable des omissions, inexactitudes ou defauts de mise a jour.</p>
+        <h2 class="font-body text-lg sm:text-xl md:text-xl text-gold-500 mt-6 sm:mt-8 md:mt-10 mb-3 sm:mb-4 md:mb-5 pb-2 border-b border-gold-500/30">7. Responsabilite</h2>
+        <p class="text-white/85 mb-3 text-sm sm:text-base">B.A.B s'efforce d'assurer l'exactitude des informations diffusees sur ce site. Toutefois, il ne saurait etre tenu responsable des omissions, inexactitudes ou defauts de mise a jour.</p>
 
-        <h2>8. Liens externes</h2>
-        <p>Ce site peut contenir des liens vers d'autres sites. B.A.B n'exerce aucun controle sur ces sites et decline toute responsabilite quant a leur contenu.</p>
+        <h2 class="font-body text-lg sm:text-xl md:text-xl text-gold-500 mt-6 sm:mt-8 md:mt-10 mb-3 sm:mb-4 md:mb-5 pb-2 border-b border-gold-500/30">8. Liens externes</h2>
+        <p class="text-white/85 mb-3 text-sm sm:text-base">Ce site peut contenir des liens vers d'autres sites. B.A.B n'exerce aucun controle sur ces sites et decline toute responsabilite quant a leur contenu.</p>
 
-        <h2>9. Droit applicable</h2>
-        <p>Les presentes mentions legales sont soumises au droit francais. En cas de litige, les tribunaux francais seront seuls competents.</p>
+        <h2 class="font-body text-lg sm:text-xl md:text-xl text-gold-500 mt-6 sm:mt-8 md:mt-10 mb-3 sm:mb-4 md:mb-5 pb-2 border-b border-gold-500/30">9. Droit applicable</h2>
+        <p class="text-white/85 mb-3 text-sm sm:text-base">Les presentes mentions legales sont soumises au droit francais. En cas de litige, les tribunaux francais seront seuls competents.</p>
 
-        <h2>10. Contact</h2>
-        <p>Pour toute question concernant ces mentions legales, vous pouvez nous contacter :</p>
-        <p>Email : <a href="mailto:bab.empirevision@gmail.com">bab.empirevision@gmail.com</a></p>
-        <p>Instagram : <a href="https://www.instagram.com/b.a.b.empirevision" target="_blank">@b.a.b.empirevision</a></p>
+        <h2 class="font-body text-lg sm:text-xl md:text-xl text-gold-500 mt-6 sm:mt-8 md:mt-10 mb-3 sm:mb-4 md:mb-5 pb-2 border-b border-gold-500/30">10. Contact</h2>
+        <p class="text-white/85 mb-3 text-sm sm:text-base">Pour toute question concernant ces mentions legales, vous pouvez nous contacter :</p>
+        <p class="text-white/85 mb-3 text-sm sm:text-base">Email : <a href="mailto:bab.empirevision@gmail.com">bab.empirevision@gmail.com</a></p>
+        <p class="text-white/85 mb-3 text-sm sm:text-base">Instagram : <a href="https://www.instagram.com/b.a.b.empirevision" target="_blank">@b.a.b.empirevision</a></p>
     </div>
 
-    <footer>
+    <footer class="text-center px-3 py-5 sm:px-4 sm:py-6 md:px-10 md:py-10 text-white/50 border-t border-white/10 text-xs sm:text-sm md:text-base">
         <p>&copy; 2026 B.A.B - Tous droits reserves</p>
     </footer>
 </body>

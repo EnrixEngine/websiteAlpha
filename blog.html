@@ -21,6 +21,29 @@
     <!-- Font Awesome pour les icones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    gold: { 500: '#ddac0b', 400: '#f4d03f', 600: '#c4a00a' },
+                    lime: { 500: '#c4d10c' },
+                    dark: { 900: '#0a0a1a', 800: '#0d1a2d', 700: '#1a1a3a' },
+                    navy: { 800: '#1e3a8a', 600: '#2563eb' }
+                },
+                fontFamily: {
+                    heading: ['Cinzel', 'serif'],
+                    body: ['Montserrat', 'sans-serif'],
+                    display: ['Oswald', 'sans-serif'],
+                    text: ['Quicksand', 'sans-serif']
+                }
+            }
+        }
+    }
+    </script>
+
     <style>
         /* Overlay de transition */
         .page-loading-overlay {

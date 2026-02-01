@@ -390,27 +390,40 @@
                 font-size: 0.7em;
                 letter-spacing: 4px;
             }
-            /* Labels Portfolio / Boutique - repositionner */
+            /* Layout vertical sur mobile */
+            .side-left {
+                width: 100%;
+                height: 50%;
+                top: 0;
+                left: 0;
+            }
+            .side-right {
+                width: 100%;
+                height: 50%;
+                top: 50%;
+                right: auto;
+                left: 0;
+            }
+            /* Labels repositionnes au centre de chaque zone */
             .side-label {
                 left: 50% !important;
             }
             .side-left .side-label {
-                top: 30%;
+                top: 25%;
                 transform: translate(-50%, -50%);
             }
             .side-right .side-label {
-                top: 70%;
+                top: 75%;
                 transform: translate(-50%, -50%);
             }
             .side-label h2 {
                 font-size: 1.1em;
                 letter-spacing: 4px;
             }
-            .diagonal-wall-top {
-                height: calc(30% - 30px);
-            }
+            /* Trait dore horizontal au lieu de vertical */
+            .diagonal-wall-top,
             .diagonal-wall-bottom {
-                height: calc(30% - 30px);
+                display: none;
             }
             /* Footer liens légaux */
             footer {
@@ -440,20 +453,14 @@
             }
             /* Labels Portfolio / Boutique - encore plus petit */
             .side-left .side-label {
-                top: 28%;
+                top: 22%;
             }
             .side-right .side-label {
-                top: 72%;
+                top: 78%;
             }
             .side-label h2 {
                 font-size: 0.9em;
                 letter-spacing: 3px;
-            }
-            .diagonal-wall-top {
-                height: calc(28% - 25px);
-            }
-            .diagonal-wall-bottom {
-                height: calc(28% - 25px);
             }
             /* Footer liens légaux - compact */
             footer {
@@ -495,20 +502,14 @@
                 letter-spacing: 2px;
             }
             .side-left .side-label {
-                top: 25%;
+                top: 20%;
             }
             .side-right .side-label {
-                top: 75%;
+                top: 80%;
             }
             .side-label h2 {
                 font-size: 0.8em;
                 letter-spacing: 2px;
-            }
-            .diagonal-wall-top {
-                height: calc(25% - 20px);
-            }
-            .diagonal-wall-bottom {
-                height: calc(25% - 20px);
             }
             footer a {
                 font-size: 0.45em;

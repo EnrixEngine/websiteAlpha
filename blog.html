@@ -25,6 +25,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
     tailwind.config = {
+        corePlugins: {
+            preflight: false,
+        },
         theme: {
             extend: {
                 colors: {
@@ -2967,7 +2970,7 @@
             }
         }
 
-        /* Mobile hamburger button */
+        /* Mobile hamburger button - hidden by default, shown at 768px */
         .mobile-hamburger {
             display: none;
             flex-direction: column;
@@ -2984,7 +2987,6 @@
             gap: 5px;
             padding: 10px;
             transition: all 0.3s ease;
-            z-index: 1001;
         }
         .mobile-hamburger:hover {
             border-color: rgba(221, 172, 11, 0.6);
@@ -3008,80 +3010,43 @@
             transform: rotate(-45deg) translate(5px, -5px);
         }
 
-        /* Mobile nav drawer */
-        .mobile-nav-overlay {
+        /* Mobile dropdown menu - like Numerisud: simple dropdown below nav */
+        .mobile-nav-menu {
             display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 9990;
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            background: linear-gradient(180deg, rgba(10, 10, 26, 0.95), rgba(13, 26, 45, 0.95));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(221, 172, 11, 0.2);
+            border-radius: 15px;
+            margin: 10px auto 0;
+            max-width: calc(100% - 20px);
+            padding: 10px 0;
         }
-        .mobile-nav-overlay.active {
-            opacity: 1;
-        }
-        .mobile-nav-drawer {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: -280px;
-            width: 280px;
-            height: 100%;
-            background: linear-gradient(180deg, rgba(10, 10, 26, 0.98), rgba(13, 26, 45, 0.98));
-            backdrop-filter: blur(30px);
-            -webkit-backdrop-filter: blur(30px);
-            border-right: 2px solid rgba(221, 172, 11, 0.3);
-            z-index: 9991;
-            transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow-y: auto;
-            padding-top: 80px;
-        }
-        .mobile-nav-drawer.active {
-            left: 0;
-        }
-        .mobile-nav-drawer a {
+        .mobile-nav-menu a {
             display: block;
             color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
-            padding: 16px 30px;
+            padding: 14px 25px;
             font-family: 'Montserrat', sans-serif;
             font-size: 0.95em;
             font-weight: 500;
             letter-spacing: 1px;
             transition: all 0.3s ease;
-            border-left: 3px solid transparent;
         }
-        .mobile-nav-drawer a:hover,
-        .mobile-nav-drawer a.active {
+        .mobile-nav-menu a:hover,
+        .mobile-nav-menu a.active {
             color: #ddac0b;
             background: rgba(221, 172, 11, 0.1);
-            border-left-color: #ddac0b;
         }
-        .mobile-nav-drawer a.active {
+        .mobile-nav-menu a.active {
             font-weight: 700;
-        }
-        .mobile-nav-drawer .drawer-header {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            padding: 20px 25px;
-            border-bottom: 1px solid rgba(221, 172, 11, 0.2);
-            font-family: 'Cinzel', serif;
-            font-size: 1.3em;
-            color: #ddac0b;
-            letter-spacing: 3px;
         }
 
         /* Responsive */
 
         @media (max-width: 768px) {
             h1 {
-                font-size: 3.5em;
+                font-size: 4em;
                 letter-spacing: 3px;
             }
             .title-decoration {
@@ -3136,10 +3101,6 @@
             }
             .mobile-hamburger {
                 display: flex;
-            }
-            .mobile-nav-overlay,
-            .mobile-nav-drawer {
-                display: block;
             }
             /* Admin - masquer sur mobile */
             .admin-sidebar-toggle {
@@ -3253,7 +3214,7 @@
 
         @media (max-width: 480px) {
             h1 {
-                font-size: 2.8em;
+                font-size: 3em;
                 letter-spacing: 2px;
             }
             .title-decoration {
@@ -8097,10 +8058,8 @@
             </nav>
         </div>
 
-        <!-- Mobile nav drawer -->
-        <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
-        <div class="mobile-nav-drawer" id="mobileNavDrawer">
-            <div class="drawer-header">B.A.B</div>
+        <!-- Mobile dropdown menu (like Numerisud) -->
+        <div class="mobile-nav-menu" id="mobileNavMenu" style="display:none;">
             <a href="#" class="mobile-nav-link active" data-section="home">Accueil</a>
             <a href="#" class="mobile-nav-link" data-section="evenements">Évènements</a>
             <a href="#" class="mobile-nav-link" data-section="creations">Créations Uniques</a>
@@ -9027,28 +8986,20 @@
 
         // Note: attachNavEvents() sera appelé après applyNavOrder() dans DOMContentLoaded
 
-        // Mobile nav drawer toggle
+        // Mobile nav menu toggle (like Numerisud - simple show/hide)
         var mobileHamburgerBtn = document.getElementById('mobileHamburger');
-        var mobileNavOverlayEl = document.getElementById('mobileNavOverlay');
-        var mobileNavDrawerEl = document.getElementById('mobileNavDrawer');
+        var mobileNavMenu = document.getElementById('mobileNavMenu');
 
-        function toggleMobileNav() {
+        mobileHamburgerBtn.addEventListener('click', function() {
             mobileHamburgerBtn.classList.toggle('active');
-            mobileNavOverlayEl.classList.toggle('active');
-            mobileNavDrawerEl.classList.toggle('active');
-        }
+            if (mobileNavMenu.style.display === 'none' || mobileNavMenu.style.display === '') {
+                mobileNavMenu.style.display = 'block';
+            } else {
+                mobileNavMenu.style.display = 'none';
+            }
+        });
 
-        function closeMobileNav() {
-            mobileHamburgerBtn.classList.remove('active');
-            mobileNavOverlayEl.classList.remove('active');
-            mobileNavDrawerEl.classList.remove('active');
-        }
-
-        // Attach events
-        mobileHamburgerBtn.addEventListener('click', toggleMobileNav);
-        mobileNavOverlayEl.addEventListener('click', closeMobileNav);
-
-        // Mobile drawer link clicks → navigate to section + close drawer
+        // Mobile menu link clicks → navigate to section + close menu
         document.querySelectorAll('.mobile-nav-link').forEach(function(link) {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -9079,8 +9030,9 @@
                 createFloatingElements(sectionId);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                // Close mobile drawer
-                closeMobileNav();
+                // Close mobile menu
+                mobileNavMenu.style.display = 'none';
+                mobileHamburgerBtn.classList.remove('active');
             });
         });
 

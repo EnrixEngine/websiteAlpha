@@ -90,6 +90,58 @@
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-20px); }
         }
+
+        /* Responsive tablette */
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px 20px;
+            }
+            .error-code {
+                font-size: 8em;
+            }
+            .error-title {
+                font-size: 1.5em;
+                margin: 15px 0;
+            }
+            .error-message {
+                font-size: 1em;
+                margin-bottom: 30px;
+                padding: 0 10px;
+            }
+            .btn-home {
+                padding: 12px 30px;
+                font-size: 1em;
+            }
+            .lost-icon {
+                font-size: 3em;
+            }
+        }
+
+        /* Responsive mobile */
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px 15px;
+            }
+            .error-code {
+                font-size: 5em;
+            }
+            .error-title {
+                font-size: 1.2em;
+                margin: 10px 0;
+            }
+            .error-message {
+                font-size: 0.9em;
+                margin-bottom: 25px;
+            }
+            .btn-home {
+                padding: 10px 25px;
+                font-size: 0.9em;
+            }
+            .lost-icon {
+                font-size: 2.5em;
+                margin-bottom: 15px;
+            }
+        }
     </style>
 </head>
 <body>

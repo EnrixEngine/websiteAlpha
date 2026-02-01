@@ -422,6 +422,44 @@
                 letter-spacing: 0;
             }
         }
+
+        /* Écrans tactiles - désactiver les effets hover */
+        @media (hover: none) {
+            .side-left:hover,
+            .side-right:hover {
+                width: 50%;
+            }
+            .side-left:hover ~ .side-right,
+            .split-container:has(.side-right:hover) .side-left {
+                width: 50%;
+            }
+            .preview-container {
+                display: none;
+            }
+        }
+
+        /* Très petit écran - layout vertical */
+        @media (max-width: 380px) {
+            .logo {
+                font-size: 1.8em;
+                letter-spacing: 4px;
+            }
+            .logo-frame {
+                padding: 12px 20px 10px 20px;
+            }
+            .subtitle {
+                font-size: 0.55em;
+                letter-spacing: 2px;
+            }
+            .side-label h2 {
+                font-size: 0.8em;
+                letter-spacing: 2px;
+            }
+            footer a {
+                font-size: 0.45em;
+                margin: 0 3px;
+            }
+        }
     </style>
 </head>
 <body>

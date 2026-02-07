@@ -51,28 +51,18 @@ function encryptData(text) {
     }
 }
 
-// Dechiffrer une donnee sensible (supporte GCM + legacy CBC)
+// Dechiffrer une donnee sensible (AES-256-GCM uniquement)
 function decryptData(encryptedText) {
     if (!encryptedText || typeof encryptedText !== 'string') {
         return encryptedText;
     }
     try {
         if (encryptedText.startsWith('gcm:')) {
-            // Format AES-256-GCM : gcm:iv:authTag:encrypted
             const [, ivHex, authTagHex, encrypted] = encryptedText.split(':');
             const iv = Buffer.from(ivHex, 'hex');
             const authTag = Buffer.from(authTagHex, 'hex');
             const decipher = crypto.createDecipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
             decipher.setAuthTag(authTag);
-            let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-            decrypted += decipher.final('utf8');
-            return decrypted;
-        }
-        if (encryptedText.includes(':')) {
-            // Legacy AES-256-CBC : iv:encrypted
-            const [ivHex, encrypted] = encryptedText.split(':');
-            const iv = Buffer.from(ivHex, 'hex');
-            const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
             let decrypted = decipher.update(encrypted, 'hex', 'utf8');
             decrypted += decipher.final('utf8');
             return decrypted;
@@ -83,10 +73,10 @@ function decryptData(encryptedText) {
     }
 }
 
-// Verifier si une donnee est chiffree
+// Verifier si une donnee est chiffree (format GCM)
 function isEncrypted(text) {
     if (!text || typeof text !== 'string') return false;
-    return text.startsWith('gcm:') || /^[a-f0-9]{32}:/.test(text);
+    return text.startsWith('gcm:');
 }
 const rateLimit = require('express-rate-limit');
 
@@ -386,8 +376,16 @@ function createTables() {
     }
 }
 
+// Tables valides pour les migrations (whitelist contre injection SQL)
+const VALID_TABLES = ['users', 'products', 'orders', 'newsletter', 'events', 'gallery', 'carousel', 'instagram_posts', 'promo_codes'];
+const VALID_IDENTIFIER = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
 // Ajouter une colonne si elle n'existe pas
 function addColumnIfMissing(table, column, definition) {
+    if (!VALID_TABLES.includes(table) || !VALID_IDENTIFIER.test(column)) {
+        logger.error(`Migration: identifiant invalide (table=${table}, column=${column})`);
+        return;
+    }
     try {
         const info = db.exec(`PRAGMA table_info(${table})`);
         if (info.length > 0) {
@@ -460,57 +458,75 @@ async function initDatabase() {
     saveDatabase();
 }
 
-// Migration pour chiffrer les donnees existantes
+// Migration pour chiffrer les donnees existantes et migrer CBC vers GCM
 async function migrateEncryption() {
     logger.info('Verification du chiffrement des donnees...');
+
+    // Detecter le format legacy CBC (iv hex 32 chars : encrypted hex)
+    const isCbcFormat = (text) => {
+        if (!text || typeof text !== 'string') return false;
+        return !text.startsWith('gcm:') && /^[a-f0-9]{32}:[a-f0-9]+$/.test(text);
+    };
+
+    // Dechiffrer le format legacy CBC (utilise uniquement pour la migration)
+    const decryptLegacyCbc = (encryptedText) => {
+        const [ivHex, encrypted] = encryptedText.split(':');
+        const iv = Buffer.from(ivHex, 'hex');
+        const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
+        let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+        decrypted += decipher.final('utf8');
+        return decrypted;
+    };
+
+    // Migrer un champ : plaintext→GCM, CBC→GCM, ou null si deja GCM
+    const migrateField = (value) => {
+        if (!value) return null;
+        if (isEncrypted(value)) return null; // Deja en GCM
+        if (isCbcFormat(value)) {
+            try {
+                return encryptData(decryptLegacyCbc(value));
+            } catch {
+                return null;
+            }
+        }
+        return encryptData(value); // Texte clair → GCM
+    };
 
     // Migrer les utilisateurs
     const users = dbAll('SELECT id, email, adresse, telephone FROM users');
     let usersMigrated = 0;
     for (const user of users) {
-        let needsUpdate = false;
-        const updates = {};
+        const emailUpdate = migrateField(user.email);
+        const adresseUpdate = migrateField(user.adresse);
+        const telephoneUpdate = migrateField(user.telephone);
 
-        if (user.email && !isEncrypted(user.email)) {
-            updates.email = encryptData(user.email);
-            needsUpdate = true;
-        }
-        if (user.adresse && !isEncrypted(user.adresse)) {
-            updates.adresse = encryptData(user.adresse);
-            needsUpdate = true;
-        }
-        if (user.telephone && !isEncrypted(user.telephone)) {
-            updates.telephone = encryptData(user.telephone);
-            needsUpdate = true;
-        }
-
-        if (needsUpdate) {
+        if (emailUpdate || adresseUpdate || telephoneUpdate) {
             db.run(`
                 UPDATE users SET
                     email = COALESCE(?, email),
                     adresse = COALESCE(?, adresse),
                     telephone = COALESCE(?, telephone)
                 WHERE id = ?
-            `, [updates.email || null, updates.adresse || null, updates.telephone || null, user.id]);
+            `, [emailUpdate, adresseUpdate, telephoneUpdate, user.id]);
             usersMigrated++;
         }
     }
     if (usersMigrated > 0) {
-        logger.info(`Migration: ${usersMigrated} utilisateur(s) chiffre(s)`);
+        logger.info(`Migration: ${usersMigrated} utilisateur(s) migre(s) vers GCM`);
     }
 
     // Migrer la newsletter
     const subscribers = dbAll('SELECT id, email FROM newsletter');
     let newsletterMigrated = 0;
     for (const sub of subscribers) {
-        if (sub.email && !isEncrypted(sub.email)) {
-            const encryptedEmail = encryptData(sub.email);
-            db.run('UPDATE newsletter SET email = ? WHERE id = ?', [encryptedEmail, sub.id]);
+        const emailUpdate = migrateField(sub.email);
+        if (emailUpdate) {
+            db.run('UPDATE newsletter SET email = ? WHERE id = ?', [emailUpdate, sub.id]);
             newsletterMigrated++;
         }
     }
     if (newsletterMigrated > 0) {
-        logger.info(`Migration: ${newsletterMigrated} email(s) newsletter chiffre(s)`);
+        logger.info(`Migration: ${newsletterMigrated} email(s) newsletter migre(s) vers GCM`);
     }
 
     logger.info('Chiffrement des donnees verifie');

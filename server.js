@@ -10,45 +10,75 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
-const fs = require('fs');
+const fsPromises = require('fs').promises;
 const cloudinary = require('cloudinary').v2;
 const crypto = require('crypto');
+
+// ==================== LOGGER ====================
+const isProduction = process.env.NODE_ENV === 'production';
+/* eslint-disable no-console */
+const logger = {
+    info: (...args) => { if (!isProduction) console.log(...args); },
+    warn: (...args) => { if (!isProduction) console.warn(...args); },
+    error: (...args) => { console.error(...args); },
+    debug: (...args) => { if (!isProduction) console.log(...args); },
+};
+/* eslint-enable no-console */
 
 // ==================== SECURITE ====================
 const helmet = require('helmet');
 
-// ==================== CHIFFREMENT DES DONNEES ====================
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || crypto.createHash('sha256').update(process.env.JWT_SECRET || 'alphamouv_default_key_2024').digest();
-const IV_LENGTH = 16;
+// ==================== CHIFFREMENT DES DONNEES (AES-256-GCM) ====================
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY
+    || crypto.createHash('sha256')
+        .update(process.env.JWT_SECRET || 'alphamouv_default_key_2024')
+        .digest();
+const GCM_IV_LENGTH = 12;
 
-// Chiffrer une donnee sensible
+// Chiffrer une donnee sensible (AES-256-GCM - chiffrement authentifie)
 function encryptData(text) {
     if (!text) return text;
     try {
-        const iv = crypto.randomBytes(IV_LENGTH);
-        const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
+        const iv = crypto.randomBytes(GCM_IV_LENGTH);
+        const cipher = crypto.createCipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
         let encrypted = cipher.update(text, 'utf8', 'hex');
         encrypted += cipher.final('hex');
-        return iv.toString('hex') + ':' + encrypted;
+        const authTag = cipher.getAuthTag().toString('hex');
+        return 'gcm:' + iv.toString('hex') + ':' + authTag + ':' + encrypted;
     } catch (error) {
-        console.error('Erreur chiffrement:', error);
+        logger.error('Erreur chiffrement:', error);
         return text;
     }
 }
 
-// Dechiffrer une donnee sensible
+// Dechiffrer une donnee sensible (supporte GCM + legacy CBC)
 function decryptData(encryptedText) {
-    if (!encryptedText || !encryptedText.includes(':')) return encryptedText;
+    if (!encryptedText || typeof encryptedText !== 'string') {
+        return encryptedText;
+    }
     try {
-        const parts = encryptedText.split(':');
-        const iv = Buffer.from(parts[0], 'hex');
-        const encrypted = parts[1];
-        const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
-        let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-        decrypted += decipher.final('utf8');
-        return decrypted;
-    } catch (error) {
-        // Retourner la valeur originale si echec (donnees non chiffrees)
+        if (encryptedText.startsWith('gcm:')) {
+            // Format AES-256-GCM : gcm:iv:authTag:encrypted
+            const [, ivHex, authTagHex, encrypted] = encryptedText.split(':');
+            const iv = Buffer.from(ivHex, 'hex');
+            const authTag = Buffer.from(authTagHex, 'hex');
+            const decipher = crypto.createDecipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
+            decipher.setAuthTag(authTag);
+            let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+            decrypted += decipher.final('utf8');
+            return decrypted;
+        }
+        if (encryptedText.includes(':')) {
+            // Legacy AES-256-CBC : iv:encrypted
+            const [ivHex, encrypted] = encryptedText.split(':');
+            const iv = Buffer.from(ivHex, 'hex');
+            const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
+            let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+            decrypted += decipher.final('utf8');
+            return decrypted;
+        }
+        return encryptedText;
+    } catch {
         return encryptedText;
     }
 }
@@ -56,7 +86,7 @@ function decryptData(encryptedText) {
 // Verifier si une donnee est chiffree
 function isEncrypted(text) {
     if (!text || typeof text !== 'string') return false;
-    return text.includes(':') && /^[a-f0-9]{32}:/.test(text);
+    return text.startsWith('gcm:') || /^[a-f0-9]{32}:/.test(text);
 }
 const rateLimit = require('express-rate-limit');
 
@@ -77,14 +107,6 @@ const authLimiter = rateLimit({
     legacyHeaders: false,
 });
 
-const apiLimiter = rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 minute
-    max: 500, // 500 requetes API par minute
-    message: { error: 'Trop de requetes API, reessayez dans 1 minute' },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-
 // Configuration Cloudinary
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -97,9 +119,9 @@ let stripe = null;
 const STRIPE_PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY || '';
 if (process.env.STRIPE_SECRET_KEY) {
     stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-    console.log('Stripe configure en mode', STRIPE_PUBLISHABLE_KEY.includes('test') ? 'TEST' : 'PRODUCTION');
+    logger.info('Stripe configure en mode', STRIPE_PUBLISHABLE_KEY.includes('test') ? 'TEST' : 'PRODUCTION');
 } else {
-    console.log('Stripe non configure - ajoutez STRIPE_SECRET_KEY pour activer les paiements');
+    logger.info('Stripe non configure - ajoutez STRIPE_SECRET_KEY pour activer les paiements');
 }
 
 // Configuration Resend (emails)
@@ -107,15 +129,15 @@ let resend = null;
 if (process.env.RESEND_API_KEY) {
     const { Resend } = require('resend');
     resend = new Resend(process.env.RESEND_API_KEY);
-    console.log('Resend configure pour les emails');
+    logger.info('Resend configure pour les emails');
 } else {
-    console.log('Resend non configure - ajoutez RESEND_API_KEY pour activer les emails');
+    logger.info('Resend non configure - ajoutez RESEND_API_KEY pour activer les emails');
 }
 
 // Fonction d'envoi d'email de confirmation de commande
 async function sendOrderConfirmationEmail(order, customerEmail, customerName) {
     if (!resend) {
-        console.log('Email non envoye - Resend non configure');
+        logger.info('Email non envoye - Resend non configure');
         return false;
     }
 
@@ -193,14 +215,14 @@ async function sendOrderConfirmationEmail(order, customerEmail, customerName) {
         });
 
         if (error) {
-            console.error('Erreur envoi email:', error);
+            logger.error('Erreur envoi email:', error);
             return false;
         }
 
-        console.log('Email de confirmation envoye:', data?.id);
+        logger.info('Email de confirmation envoye:', data?.id);
         return true;
     } catch (error) {
-        console.error('Erreur envoi email:', error);
+        logger.error('Erreur envoi email:', error);
         return false;
     }
 }
@@ -255,10 +277,14 @@ app.use(express.static(path.join(__dirname)));
 app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Creer le dossier uploads s'il n'existe pas
-if (!fs.existsSync(path.join(__dirname, 'uploads'))) {
-    fs.mkdirSync(path.join(__dirname, 'uploads'), { recursive: true });
-}
+// Creer le dossier uploads s'il n'existe pas (async IIFE)
+(async () => {
+    try {
+        await fsPromises.access(path.join(__dirname, 'uploads'));
+    } catch {
+        await fsPromises.mkdir(path.join(__dirname, 'uploads'), { recursive: true });
+    }
+})();
 
 // Configuration Multer pour upload d'images (stockage en memoire pour Cloudinary)
 const storage = multer.memoryStorage();
@@ -283,266 +309,160 @@ const upload = multer({
 let db;
 const DB_PATH = path.join(__dirname, 'alphamouv.db');
 
-async function initDatabase() {
-    const initSqlJs = require('sql.js');
-    const SQL = await initSqlJs();
-
-    // Charger la base existante ou en creer une nouvelle
-    if (fs.existsSync(DB_PATH)) {
-        const fileBuffer = fs.readFileSync(DB_PATH);
-        db = new SQL.Database(fileBuffer);
-        console.log('Base de donnees chargee');
-    } else {
-        db = new SQL.Database();
-        console.log('Nouvelle base de donnees creee');
-    }
-
-    // Creer les tables
-    db.run(`
-        CREATE TABLE IF NOT EXISTS users (
+// Creer toutes les tables de la base de donnees
+function createTables() {
+    const tables = [
+        `CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            nom TEXT,
-            prenom TEXT,
-            adresse TEXT,
-            code_postal TEXT,
-            ville TEXT,
-            telephone TEXT,
-            role TEXT DEFAULT 'user',
-            two_factor_secret TEXT,
-            two_factor_enabled INTEGER DEFAULT 0,
+            email TEXT UNIQUE NOT NULL, password TEXT NOT NULL,
+            nom TEXT, prenom TEXT, adresse TEXT, code_postal TEXT,
+            ville TEXT, telephone TEXT, role TEXT DEFAULT 'user',
+            two_factor_secret TEXT, two_factor_enabled INTEGER DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS products (
+        )`,
+        `CREATE TABLE IF NOT EXISTS products (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nom TEXT NOT NULL,
-            description TEXT,
-            prix REAL NOT NULL,
-            prix_promo REAL,
-            image TEXT,
-            images TEXT,
-            tailles TEXT,
-            categorie TEXT,
-            stock INTEGER DEFAULT 0,
-            actif INTEGER DEFAULT 1,
+            nom TEXT NOT NULL, description TEXT, prix REAL NOT NULL,
+            prix_promo REAL, image TEXT, images TEXT, tailles TEXT,
+            categorie TEXT, stock INTEGER DEFAULT 0, actif INTEGER DEFAULT 1,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS newsletter (
+        )`,
+        `CREATE TABLE IF NOT EXISTS newsletter (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            actif INTEGER DEFAULT 1,
+            email TEXT UNIQUE NOT NULL, actif INTEGER DEFAULT 1,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS events (
+        )`,
+        `CREATE TABLE IF NOT EXISTS events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            titre TEXT NOT NULL,
-            description TEXT,
-            date TEXT,
-            lieu TEXT,
-            image TEXT,
-            statut TEXT DEFAULT 'a_venir',
+            titre TEXT NOT NULL, description TEXT, date TEXT,
+            lieu TEXT, image TEXT, statut TEXT DEFAULT 'a_venir',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS gallery (
+        )`,
+        `CREATE TABLE IF NOT EXISTS gallery (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            titre TEXT,
-            description TEXT,
-            image TEXT NOT NULL,
-            categorie TEXT,
-            ordre INTEGER DEFAULT 0,
+            titre TEXT, description TEXT, image TEXT NOT NULL,
+            categorie TEXT, ordre INTEGER DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS carousel (
+        )`,
+        `CREATE TABLE IF NOT EXISTS carousel (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            titre TEXT,
-            description TEXT,
-            image TEXT NOT NULL,
-            ordre INTEGER DEFAULT 0,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS orders (
+            titre TEXT, description TEXT, image TEXT NOT NULL,
+            ordre INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            stripe_session_id TEXT,
-            total REAL NOT NULL,
-            status TEXT DEFAULT 'pending',
-            items TEXT,
-            shipping_address TEXT,
-            paid_at TEXT,
-            promo_code TEXT,
-            discount_amount REAL DEFAULT 0,
+            user_id INTEGER NOT NULL, stripe_session_id TEXT,
+            total REAL NOT NULL, status TEXT DEFAULT 'pending',
+            items TEXT, shipping_address TEXT, paid_at TEXT,
+            promo_code TEXT, discount_amount REAL DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    `);
-
-    // Table wishlist
-    db.run(`
-        CREATE TABLE IF NOT EXISTS wishlist (
+        )`,
+        `CREATE TABLE IF NOT EXISTS wishlist (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            product_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL, product_id INTEGER NOT NULL,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id),
             FOREIGN KEY (product_id) REFERENCES products(id),
             UNIQUE(user_id, product_id)
-        )
-    `);
-
-    // Table codes promo
-    db.run(`
-        CREATE TABLE IF NOT EXISTS promo_codes (
+        )`,
+        `CREATE TABLE IF NOT EXISTS promo_codes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            code TEXT UNIQUE NOT NULL,
-            discount_percent INTEGER NOT NULL,
-            max_uses INTEGER DEFAULT NULL,
-            used_count INTEGER DEFAULT 0,
-            min_order_amount REAL DEFAULT 0,
-            active INTEGER DEFAULT 1,
-            expires_at TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-
-    db.run(`
-        CREATE TABLE IF NOT EXISTS instagram_posts (
+            code TEXT UNIQUE NOT NULL, discount_percent INTEGER NOT NULL,
+            max_uses INTEGER DEFAULT NULL, used_count INTEGER DEFAULT 0,
+            min_order_amount REAL DEFAULT 0, active INTEGER DEFAULT 1,
+            expires_at TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS instagram_posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            instagram_url TEXT NOT NULL,
-            image TEXT NOT NULL,
-            caption TEXT DEFAULT '',
-            position INTEGER DEFAULT 0,
+            instagram_url TEXT NOT NULL, image TEXT NOT NULL,
+            caption TEXT DEFAULT '', position INTEGER DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
+        )`,
+    ];
+    for (const sql of tables) {
+        db.run(sql);
+    }
+}
 
-    // Migration: ajouter stripe_session_id si la table existe deja sans cette colonne
+// Ajouter une colonne si elle n'existe pas
+function addColumnIfMissing(table, column, definition) {
     try {
-        const tableInfo = db.exec("PRAGMA table_info(orders)");
-        if (tableInfo.length > 0) {
-            const columns = tableInfo[0].values.map(col => col[1]);
-            if (!columns.includes('stripe_session_id')) {
-                db.run('ALTER TABLE orders ADD COLUMN stripe_session_id TEXT');
-                console.log('Migration: colonne stripe_session_id ajoutee');
-            }
-            if (!columns.includes('status')) {
-                db.run('ALTER TABLE orders ADD COLUMN status TEXT DEFAULT "pending"');
-                console.log('Migration: colonne status ajoutee');
-            }
-            if (!columns.includes('shipping_address')) {
-                db.run('ALTER TABLE orders ADD COLUMN shipping_address TEXT');
-                console.log('Migration: colonne shipping_address ajoutee');
-            }
-            if (!columns.includes('paid_at')) {
-                db.run('ALTER TABLE orders ADD COLUMN paid_at TEXT');
-                console.log('Migration: colonne paid_at ajoutee');
-            }
-            if (!columns.includes('promo_code')) {
-                db.run('ALTER TABLE orders ADD COLUMN promo_code TEXT');
-                console.log('Migration: colonne promo_code ajoutee');
-            }
-            if (!columns.includes('discount_amount')) {
-                db.run('ALTER TABLE orders ADD COLUMN discount_amount REAL DEFAULT 0');
-                console.log('Migration: colonne discount_amount ajoutee');
+        const info = db.exec(`PRAGMA table_info(${table})`);
+        if (info.length > 0) {
+            const columns = info[0].values.map(col => col[1]);
+            if (!columns.includes(column)) {
+                db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+                logger.info(`Migration: colonne ${column} ajoutee a ${table}`);
             }
         }
-    } catch (e) {
-        console.log('Migration orders: ', e.message);
+    } catch (err) {
+        logger.info(`Migration ${table}: `, err.message);
     }
+}
 
-    // Migration: ajouter stock aux produits si manquant
-    try {
-        const productTableInfo = db.exec("PRAGMA table_info(products)");
-        if (productTableInfo.length > 0) {
-            const productColumns = productTableInfo[0].values.map(col => col[1]);
-            if (!productColumns.includes('stock')) {
-                db.run('ALTER TABLE products ADD COLUMN stock INTEGER DEFAULT 0');
-                console.log('Migration: colonne stock ajoutee aux produits');
-            }
-        }
-    } catch (e) {
-        console.log('Migration products: ', e.message);
-    }
+// Executer toutes les migrations de schema
+function runMigrations() {
+    addColumnIfMissing('orders', 'stripe_session_id', 'TEXT');
+    addColumnIfMissing('orders', 'status', 'TEXT DEFAULT "pending"');
+    addColumnIfMissing('orders', 'shipping_address', 'TEXT');
+    addColumnIfMissing('orders', 'paid_at', 'TEXT');
+    addColumnIfMissing('orders', 'promo_code', 'TEXT');
+    addColumnIfMissing('orders', 'discount_amount', 'REAL DEFAULT 0');
+    addColumnIfMissing('products', 'stock', 'INTEGER DEFAULT 0');
+    addColumnIfMissing('users', 'auth_provider', 'TEXT DEFAULT "email"');
+    addColumnIfMissing('instagram_posts', 'video', 'TEXT DEFAULT ""');
+}
 
-    // Migration: ajouter auth_provider a la table users
-    try {
-        const userTableInfo = db.exec("PRAGMA table_info(users)");
-        if (userTableInfo.length > 0) {
-            const userColumns = userTableInfo[0].values.map(col => col[1]);
-            if (!userColumns.includes('auth_provider')) {
-                db.run('ALTER TABLE users ADD COLUMN auth_provider TEXT DEFAULT "email"');
-                console.log('Migration: colonne auth_provider ajoutee');
-            }
-        }
-    } catch (e) {
-        console.log('Migration users: ', e.message);
-    }
-
-    // Migration: ajouter colonne video aux posts Instagram
-    try {
-        const instaTableInfo = db.exec("PRAGMA table_info(instagram_posts)");
-        if (instaTableInfo.length > 0) {
-            const instaColumns = instaTableInfo[0].values.map(col => col[1]);
-            if (!instaColumns.includes('video')) {
-                db.run('ALTER TABLE instagram_posts ADD COLUMN video TEXT DEFAULT ""');
-                console.log('Migration: colonne video ajoutee aux posts Instagram');
-            }
-        }
-    } catch (e) {
-        console.log('Migration instagram_posts: ', e.message);
-    }
-
-    // Creer ou mettre a jour admin par defaut
+// Creer ou mettre a jour le compte admin
+function setupAdmin() {
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@alphamouv.com';
     const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-    const hashedPassword = bcrypt.hashSync(adminPassword, 10);
+    const BCRYPT_ROUNDS = 10;
+    const hashedPassword = bcrypt.hashSync(adminPassword, BCRYPT_ROUNDS);
     const encryptedAdminEmail = encryptData(adminEmail);
 
     const adminResult = db.exec("SELECT id FROM users WHERE role = 'admin'");
     if (adminResult.length === 0 || adminResult[0].values.length === 0) {
-        // Creer l'admin s'il n'existe pas
-        db.run(`
-            INSERT INTO users (email, password, nom, prenom, role)
-            VALUES (?, ?, ?, ?, ?)
-        `, [encryptedAdminEmail, hashedPassword, 'Admin', 'AlphaMouv', 'admin']);
-        console.log('Admin cree');
+        db.run(
+            'INSERT INTO users (email, password, nom, prenom, role) VALUES (?, ?, ?, ?, ?)',
+            [encryptedAdminEmail, hashedPassword, 'Admin', 'AlphaMouv', 'admin']
+        );
+        logger.info('Admin cree');
     } else {
-        // Mettre a jour l'email et mot de passe admin
-        db.run(`
-            UPDATE users SET email = ?, password = ? WHERE role = 'admin'
-        `, [encryptedAdminEmail, hashedPassword]);
-        console.log('Admin mis a jour');
+        db.run(
+            'UPDATE users SET email = ?, password = ? WHERE role = ?',
+            [encryptedAdminEmail, hashedPassword, 'admin']
+        );
+        logger.info('Admin mis a jour');
+    }
+}
+
+async function initDatabase() {
+    const initSqlJs = require('sql.js');
+    const SQL = await initSqlJs();
+
+    try {
+        await fsPromises.access(DB_PATH);
+        const fileBuffer = await fsPromises.readFile(DB_PATH);
+        db = new SQL.Database(fileBuffer);
+        logger.info('Base de donnees chargee');
+    } catch {
+        db = new SQL.Database();
+        logger.info('Nouvelle base de donnees creee');
     }
 
-    // Migration: chiffrer les donnees existantes non chiffrees
+    createTables();
+    runMigrations();
+    setupAdmin();
     await migrateEncryption();
-
     saveDatabase();
 }
 
 // Migration pour chiffrer les donnees existantes
 async function migrateEncryption() {
-    console.log('Verification du chiffrement des donnees...');
+    logger.info('Verification du chiffrement des donnees...');
 
     // Migrer les utilisateurs
     const users = dbAll('SELECT id, email, adresse, telephone FROM users');
@@ -576,7 +496,7 @@ async function migrateEncryption() {
         }
     }
     if (usersMigrated > 0) {
-        console.log(`Migration: ${usersMigrated} utilisateur(s) chiffre(s)`);
+        logger.info(`Migration: ${usersMigrated} utilisateur(s) chiffre(s)`);
     }
 
     // Migrer la newsletter
@@ -590,16 +510,60 @@ async function migrateEncryption() {
         }
     }
     if (newsletterMigrated > 0) {
-        console.log(`Migration: ${newsletterMigrated} email(s) newsletter chiffre(s)`);
+        logger.info(`Migration: ${newsletterMigrated} email(s) newsletter chiffre(s)`);
     }
 
-    console.log('Chiffrement des donnees verifie');
+    logger.info('Chiffrement des donnees verifie');
 }
 
 function saveDatabase() {
-    const data = db.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(DB_PATH, buffer);
+    const dbExport = db.export();
+    const buffer = Buffer.from(dbExport);
+    fsPromises.writeFile(DB_PATH, buffer).catch(err => {
+        logger.error('Erreur sauvegarde base de donnees:', err);
+    });
+}
+
+// Decrementer le stock des produits d'une commande
+function decrementOrderStock(orderItems) {
+    const items = JSON.parse(orderItems || '[]');
+    for (const item of items) {
+        const product = dbGet('SELECT stock FROM products WHERE id = ?', [item.id]);
+        if (product) {
+            const newStock = Math.max(0, product.stock - (item.quantity || 1));
+            dbRun('UPDATE products SET stock = ? WHERE id = ?', [newStock, item.id]);
+        }
+    }
+}
+
+// Traiter une commande apres paiement confirme
+async function processCompletedPayment(order) {
+    dbRun(
+        "UPDATE orders SET status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE stripe_session_id = ?",
+        [order.stripe_session_id]
+    );
+
+    try {
+        decrementOrderStock(order.items);
+    } catch (err) {
+        logger.error('Erreur decrementation stock:', err);
+    }
+
+    if (order.promo_code) {
+        dbRun(
+            'UPDATE promo_codes SET used_count = used_count + 1 WHERE code = ?',
+            [order.promo_code]
+        );
+    }
+
+    const user = dbGet('SELECT * FROM users WHERE id = ?', [order.user_id]);
+    if (user) {
+        const email = decryptData(user.email);
+        const name = user.prenom
+            ? `${user.prenom} ${user.nom || ''}`.trim()
+            : email;
+        await sendOrderConfirmationEmail({ ...order, status: 'paid' }, email, name);
+    }
 }
 
 // Helpers pour simplifier les requetes
@@ -742,7 +706,7 @@ app.post('/api/auth/google', authLimiter, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Erreur connexion Google:', error);
+        logger.error('Erreur connexion Google:', error);
         res.status(500).json({ error: 'Erreur lors de la connexion Google' });
     }
 });
@@ -787,7 +751,7 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
             user: { id: result.lastID, email, nom, prenom, role: 'user' }
         });
     } catch (error) {
-        console.error('Erreur inscription:', error);
+        logger.error('Erreur inscription:', error);
         res.status(500).json({ error: 'Erreur lors de l\'inscription' });
     }
 });
@@ -837,7 +801,7 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Erreur connexion:', error);
+        logger.error('Erreur connexion:', error);
         res.status(500).json({ error: 'Erreur lors de la connexion' });
     }
 });
@@ -973,7 +937,7 @@ app.delete('/api/products/:id', authenticateToken, isAdmin, (req, res) => {
 app.post('/api/orders', authenticateToken, (req, res) => {
     try {
         const { items, adresse_livraison, total } = req.body;
-        const numero = 'CMD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        const numero = 'CMD-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11).toUpperCase();
 
         const result = dbRun(`
             INSERT INTO orders (user_id, numero, total, adresse_livraison, items)
@@ -1325,7 +1289,7 @@ app.post('/api/payment/create-checkout-session', authenticateToken, async (req, 
             orderId: orderResult.lastID
         });
     } catch (error) {
-        console.error('Erreur creation session Stripe:', error);
+        logger.error('Erreur creation session Stripe:', error);
         // Retourner le message d'erreur Stripe pour debug
         const errorMessage = error.message || 'Erreur lors de la creation du paiement';
         res.status(500).json({ error: errorMessage });
@@ -1340,51 +1304,14 @@ app.get('/api/payment/status/:sessionId', authenticateToken, async (req, res) =>
         }
         const session = await stripe.checkout.sessions.retrieve(req.params.sessionId);
 
-        // Mettre a jour le statut de la commande si paye
+        // Traiter le paiement si confirme et pas encore traite
         if (session.payment_status === 'paid') {
-            // Verifier si la commande n'a pas deja ete traitee
-            const order = dbGet('SELECT * FROM orders WHERE stripe_session_id = ?', [session.id]);
-
+            const order = dbGet(
+                'SELECT * FROM orders WHERE stripe_session_id = ?',
+                [session.id]
+            );
             if (order && order.status !== 'paid') {
-                // Mettre a jour le statut
-                dbRun(`
-                    UPDATE orders SET status = 'paid', paid_at = CURRENT_TIMESTAMP
-                    WHERE stripe_session_id = ?
-                `, [session.id]);
-
-                // Decrementer le stock des produits
-                try {
-                    const items = JSON.parse(order.items || '[]');
-                    for (const item of items) {
-                        const product = dbGet('SELECT stock FROM products WHERE id = ?', [item.id]);
-                        if (product) {
-                            const newStock = Math.max(0, product.stock - (item.quantity || 1));
-                            dbRun('UPDATE products SET stock = ? WHERE id = ?', [newStock, item.id]);
-                        }
-                    }
-                } catch (e) {
-                    console.error('Erreur decrementation stock:', e);
-                }
-
-                // Incrementer le compteur du code promo si utilise
-                if (order.promo_code) {
-                    dbRun(`
-                        UPDATE promo_codes SET used_count = used_count + 1
-                        WHERE code = ?
-                    `, [order.promo_code]);
-                }
-
-                // Envoyer l'email de confirmation
-                const user = dbGet('SELECT * FROM users WHERE id = ?', [order.user_id]);
-                if (user) {
-                    const decryptedEmail = decryptData(user.email);
-                    const customerName = user.prenom ? `${user.prenom} ${user.nom || ''}`.trim() : decryptedEmail;
-                    await sendOrderConfirmationEmail(
-                        { ...order, status: 'paid' },
-                        decryptedEmail,
-                        customerName
-                    );
-                }
+                await processCompletedPayment(order);
             }
         }
 
@@ -1394,39 +1321,8 @@ app.get('/api/payment/status/:sessionId', authenticateToken, async (req, res) =>
             amountTotal: session.amount_total / 100,
         });
     } catch (error) {
-        console.error('Erreur verification paiement:', error);
+        logger.error('Erreur verification paiement:', error);
         res.status(500).json({ error: 'Erreur verification paiement' });
-    }
-});
-
-// Historique des commandes utilisateur
-app.get('/api/orders', authenticateToken, (req, res) => {
-    try {
-        const orders = dbAll(`
-            SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC
-        `, [req.user.id]);
-        res.json(orders);
-    } catch (error) {
-        res.status(500).json({ error: 'Erreur serveur' });
-    }
-});
-
-// Admin: Toutes les commandes
-app.get('/api/admin/orders', authenticateToken, isAdmin, (req, res) => {
-    try {
-        const orders = dbAll(`
-            SELECT o.*, u.email, u.nom, u.prenom
-            FROM orders o
-            LEFT JOIN users u ON o.user_id = u.id
-            ORDER BY o.created_at DESC
-        `);
-        // Dechiffrer les emails utilisateurs
-        res.json(orders.map(o => ({
-            ...o,
-            email: decryptData(o.email)
-        })));
-    } catch (error) {
-        res.status(500).json({ error: 'Erreur serveur' });
     }
 });
 
@@ -1465,13 +1361,13 @@ app.get('/api/instagram-posts', (req, res) => {
         const posts = dbAll('SELECT * FROM instagram_posts ORDER BY position ASC, created_at DESC');
         res.json(posts || []);
     } catch (error) {
-        console.error('Erreur chargement posts Instagram:', error);
+        logger.error('Erreur chargement posts Instagram:', error);
         res.json([]);
     }
 });
 
 // Ajouter un post Instagram (admin)
-var instaUpload = upload.fields([{ name: 'image', maxCount: 1 }, { name: 'video', maxCount: 1 }]);
+const instaUpload = upload.fields([{ name: 'image', maxCount: 1 }, { name: 'video', maxCount: 1 }]);
 
 app.post('/api/instagram-posts', authenticateToken, isAdmin, instaUpload, (req, res) => {
     try {
@@ -1505,7 +1401,7 @@ app.post('/api/instagram-posts', authenticateToken, isAdmin, instaUpload, (req, 
 
         res.json({ success: true, id: result.lastID });
     } catch (error) {
-        console.error('Erreur ajout post Instagram:', error);
+        logger.error('Erreur ajout post Instagram:', error);
         res.status(500).json({ error: 'Erreur serveur' });
     }
 });
@@ -1544,7 +1440,7 @@ app.put('/api/instagram-posts/:id', authenticateToken, isAdmin, instaUpload, (re
 
         res.json({ success: true });
     } catch (error) {
-        console.error('Erreur modification post Instagram:', error);
+        logger.error('Erreur modification post Instagram:', error);
         res.status(500).json({ error: 'Erreur serveur' });
     }
 });
@@ -1555,7 +1451,7 @@ app.delete('/api/instagram-posts/:id', authenticateToken, isAdmin, (req, res) =>
         dbRun('DELETE FROM instagram_posts WHERE id = ?', [req.params.id]);
         res.json({ success: true });
     } catch (error) {
-        console.error('Erreur suppression post Instagram:', error);
+        logger.error('Erreur suppression post Instagram:', error);
         res.status(500).json({ error: 'Erreur serveur' });
     }
 });
@@ -1565,7 +1461,7 @@ app.delete('/api/instagram-posts/:id', authenticateToken, isAdmin, (req, res) =>
 app.post('/api/contact', (req, res) => {
     try {
         const { nom, email, sujet, message } = req.body;
-        console.log('Message de contact recu:', { nom, email, sujet, message });
+        logger.info('Message de contact recu:', { nom, email, sujet, message });
         res.json({ success: true, message: 'Message envoye avec succes' });
     } catch (error) {
         res.status(500).json({ error: 'Erreur lors de l\'envoi' });
@@ -1610,7 +1506,7 @@ app.get('/api/admin/users', authenticateToken, isAdmin, (req, res) => {
         });
         res.json(decryptedUsers);
     } catch (error) {
-        console.error('Erreur chargement utilisateurs:', error);
+        logger.error('Erreur chargement utilisateurs:', error);
         res.status(500).json({ error: 'Erreur serveur: ' + error.message });
     }
 });
@@ -1905,7 +1801,7 @@ app.get('/api/admin/stats/advanced', authenticateToken, isAdmin, (req, res) => {
             activePromos: activePromos?.count || 0
         });
     } catch (error) {
-        console.error('Erreur stats avancees:', error);
+        logger.error('Erreur stats avancees:', error);
         res.status(500).json({ error: 'Erreur serveur' });
     }
 });
@@ -1954,20 +1850,25 @@ app.use((req, res) => {
     res.status(404).sendFile(path.join(__dirname, '404.html'));
 });
 
+// ==================== GESTION ERREURS GLOBALE ====================
+
+// Gestionnaire d'erreurs global Express (4 parametres requis par Express)
+app.use((err, req, res, _next) => {
+    logger.error('Erreur non geree:', err.message || err);
+    res.status(err.status || 500).json({
+        error: isProduction ? 'Erreur serveur interne' : err.message
+    });
+});
+
 // ==================== DEMARRAGE SERVEUR ====================
 
-initDatabase().then(() => {
-    app.listen(PORT, () => {
-        console.log(`
-    ╔════════════════════════════════════════════╗
-    ║                                            ║
-    ║     AlphaMouv - Serveur demarre            ║
-    ║                                            ║
-    ║     URL: http://localhost:${PORT}             ║
-    ║                                            ║
-    ╚════════════════════════════════════════════╝
-        `);
+initDatabase()
+    .then(() => {
+        app.listen(PORT, () => {
+            logger.info(`AlphaMouv - Serveur demarre sur http://localhost:${PORT}`);
+        });
+    })
+    .catch(err => {
+        logger.error('Erreur initialisation base de donnees:', err);
+        process.exit(1);
     });
-}).catch(err => {
-    console.error('Erreur initialisation base de donnees:', err);
-});

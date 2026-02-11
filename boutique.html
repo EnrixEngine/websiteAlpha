@@ -4079,7 +4079,7 @@
                             <strong>Gestion complète des produits</strong>
                         </p>
                         <p style="margin: 0; font-size: 0.95em; line-height: 1.6;">
-                            • Ajout/modification de produits avec images<br> • Gestion des tailles disponibles<br> • Suivi du stock (en stock, sur commande, rupture)<br> • Stockage IndexedDB pour les images
+                            • Ajout/modification de produits avec images<br> • Gestion des tailles disponibles<br> • Suivi du stock (en stock, sur commande, rupture)<br> • Images sur Cloudinary (cloud)
                         </p>
                     </div>
                     <div class="products-list" id="productsListAdmin"></div>
@@ -4653,101 +4653,8 @@
             });
         }
 
-        // Base de données de produits (exemples)
-        const defaultProducts = [{
-            id: 1,
-            name: "T-Shirt Artistique Bleu",
-            category: "homme",
-            type: "t-shirt",
-            price: 45,
-            description: "T-shirt unique peint à la main avec design abstrait bleu",
-            sizes: ["S", "M", "L", "XL"],
-            image: null,
-            icon: ""
-        }, {
-            id: 2,
-            name: "Hoodie Galaxie",
-            category: "unisexe",
-            type: "hoodie",
-            price: 89,
-            description: "Sweat à capuche avec motif galaxie personnalisé",
-            sizes: ["M", "L", "XL"],
-            image: null,
-            icon: ""
-        }, {
-            id: 3,
-            name: "Jean Customisé",
-            category: "femme",
-            type: "pantalon",
-            price: 120,
-            description: "Jean délavé avec broderies et peintures artistiques",
-            sizes: ["36", "38", "40", "42"],
-            image: null,
-            icon: ""
-        }, {
-            id: 4,
-            name: "Veste en Jean Peinte",
-            category: "unisexe",
-            type: "veste",
-            price: 165,
-            description: "Veste en jean vintage avec peinture acrylique originale",
-            sizes: ["S", "M", "L"],
-            image: null,
-            icon: ""
-        }, {
-            id: 5,
-            name: "T-Shirt Enfant Dinosaure",
-            category: "enfant",
-            type: "t-shirt",
-            price: 35,
-            description: "T-shirt coloré avec design dinosaure fait main",
-            sizes: ["4-6 ans", "6-8 ans", "8-10 ans"],
-            image: null,
-            icon: ""
-        }, {
-            id: 6,
-            name: "Casquette Street Art",
-            category: "unisexe",
-            type: "accessoire",
-            price: 40,
-            description: "Casquette personnalisée avec graffiti unique",
-            sizes: ["Unique"],
-            image: null,
-            icon: ""
-        }, {
-            id: 7,
-            name: "T-Shirt Femme Floral",
-            category: "femme",
-            type: "t-shirt",
-            price: 48,
-            description: "T-shirt avec motif floral aquarelle",
-            sizes: ["XS", "S", "M", "L"],
-            image: null,
-            icon: ""
-        }, {
-            id: 8,
-            name: "Hoodie Enfant Espace",
-            category: "enfant",
-            type: "hoodie",
-            price: 55,
-            description: "Sweat à capuche avec fusées et planètes",
-            sizes: ["4-6 ans", "6-8 ans", "8-10 ans", "10-12 ans"],
-            image: null,
-            icon: ""
-        }, {
-            id: 9,
-            name: "Chemise Homme Splash",
-            category: "homme",
-            type: "t-shirt",
-            price: 75,
-            description: "Chemise avec éclaboussures de peinture colorées",
-            sizes: ["M", "L", "XL", "XXL"],
-            image: null,
-            icon: ""
-        }];
-
-        // Charger les produits (sera rempli par l'API au chargement)
-        let products = JSON.parse(localStorage.getItem('alphamouv_products')) || defaultProducts;
+        // Produits charges depuis l'API serveur (Turso + Cloudinary)
+        let products = [];
 
         // Convertir un produit serveur → format client
         function serverToClient(p) {
@@ -4770,15 +4677,12 @@
         // Charger les produits depuis l'API serveur
         async function loadProductsFromAPI() {
             try {
-                const apiUrl = window.location.hostname === 'localhost'
-                    ? 'http://localhost:3000/api'
-                    : window.location.origin + '/api';
-                const response = await fetch(apiUrl + '/products');
+                const response = await fetch(window.location.origin + '/api/products');
+                if (!response.ok) throw new Error('Erreur serveur ' + response.status);
                 const serverProducts = await response.json();
-                if (Array.isArray(serverProducts) && serverProducts.length > 0) {
+                if (Array.isArray(serverProducts)) {
                     products = serverProducts.map(serverToClient);
                     filteredProducts = [...products];
-                    localStorage.setItem('alphamouv_products', JSON.stringify(products));
                     console.log('Produits charges depuis l\'API:', products.length);
                 }
             } catch (error) {
@@ -4786,16 +4690,13 @@
             }
         }
 
-        // Upload base64 image vers Cloudinary via l'API
+        // Upload base64 image vers Cloudinary via l'API serveur
         async function uploadToCloudinary(base64Data) {
             const blob = await fetch(base64Data).then(r => r.blob());
             const formData = new FormData();
             formData.append('image', blob, 'product.jpg');
             const token = localStorage.getItem('alphamouv_token');
-            const apiUrl = window.location.hostname === 'localhost'
-                ? 'http://localhost:3000/api'
-                : window.location.origin + '/api';
-            const response = await fetch(apiUrl + '/upload', {
+            const response = await fetch(window.location.origin + '/api/upload', {
                 method: 'POST',
                 headers: { 'Authorization': 'Bearer ' + token },
                 body: formData
@@ -5207,7 +5108,6 @@
                 const totalRating = (product.rating.average * product.rating.count) + selectedRating;
                 product.rating.count++;
                 product.rating.average = Math.round((totalRating / product.rating.count) * 10) / 10;
-                saveProducts();
             }
 
             await customAlert('Merci pour votre avis !', 'Avis publié', 'success');
@@ -5507,221 +5407,16 @@
         window.addEventListener('DOMContentLoaded', initProducts);
 
         // ============ PANNEAU ADMINISTRATION ============
-        const DEFAULT_ADMIN_PASSWORD = 'admin123';
         let isAdminLoggedIn = false;
         let currentImageTarget = null;
 
-        // ============ MODULE INDEXEDDB POUR IMAGES ============
-        const ImageDB = {
-            db: null,
-            dbName: 'AlphamouvImagesDB',
-            dbVersion: 1,
-
-            // Initialiser la base de données
-            init: function() {
-                return new Promise((resolve, reject) => {
-                    const request = indexedDB.open(this.dbName, this.dbVersion);
-
-                    request.onerror = () => {
-                        console.error('❌ Erreur ouverture IndexedDB:', request.error);
-                        reject(request.error);
-                    };
-
-                    request.onsuccess = () => {
-                        this.db = request.result;
-                        console.log('✅ IndexedDB initialisée');
-                        resolve(this.db);
-                    };
-
-                    request.onupgradeneeded = (event) => {
-                        const db = event.target.result;
-
-                        // Créer le store pour les images produits
-                        if (!db.objectStoreNames.contains('productImages')) {
-                            const productStore = db.createObjectStore('productImages', { keyPath: 'id' });
-                            console.log('✓ Store productImages créé');
-                        }
-
-                        // Créer le store pour les images du carrousel
-                        if (!db.objectStoreNames.contains('carouselImages')) {
-                            const carouselStore = db.createObjectStore('carouselImages', { keyPath: 'index' });
-                            console.log('✓ Store carouselImages créé');
-                        }
-                    };
-                });
-            },
-
-            // Sauvegarder une image produit
-            saveProductImage: function(productId, imageData) {
-                return new Promise((resolve, reject) => {
-                    if (!this.db) {
-                        reject(new Error('Base de données non initialisée'));
-                        return;
-                    }
-
-                    const transaction = this.db.transaction(['productImages'], 'readwrite');
-                    const store = transaction.objectStore('productImages');
-                    const request = store.put({ id: productId, data: imageData, timestamp: Date.now() });
-
-                    request.onsuccess = () => {
-                        console.log('✓ Image produit sauvegardée:', productId);
-                        resolve();
-                    };
-
-                    request.onerror = () => {
-                        console.error('❌ Erreur sauvegarde image:', request.error);
-                        reject(request.error);
-                    };
-                });
-            },
-
-            // Récupérer une image produit
-            getProductImage: function(productId) {
-                return new Promise((resolve, reject) => {
-                    if (!this.db) {
-                        reject(new Error('Base de données non initialisée'));
-                        return;
-                    }
-
-                    const transaction = this.db.transaction(['productImages'], 'readonly');
-                    const store = transaction.objectStore('productImages');
-                    const request = store.get(productId);
-
-                    request.onsuccess = () => {
-                        resolve(request.result ? request.result.data : null);
-                    };
-
-                    request.onerror = () => {
-                        reject(request.error);
-                    };
-                });
-            },
-
-            // Récupérer toutes les images produits
-            getAllProductImages: function() {
-                return new Promise((resolve, reject) => {
-                    if (!this.db) {
-                        reject(new Error('Base de données non initialisée'));
-                        return;
-                    }
-
-                    const transaction = this.db.transaction(['productImages'], 'readonly');
-                    const store = transaction.objectStore('productImages');
-                    const request = store.getAll();
-
-                    request.onsuccess = () => {
-                        const images = {};
-                        request.result.forEach(item => {
-                            images[item.id] = item.data;
-                        });
-                        resolve(images);
-                    };
-
-                    request.onerror = () => {
-                        reject(request.error);
-                    };
-                });
-            },
-
-            // Supprimer une image produit
-            deleteProductImage: function(productId) {
-                return new Promise((resolve, reject) => {
-                    if (!this.db) {
-                        reject(new Error('Base de données non initialisée'));
-                        return;
-                    }
-
-                    const transaction = this.db.transaction(['productImages'], 'readwrite');
-                    const store = transaction.objectStore('productImages');
-                    const request = store.delete(productId);
-
-                    request.onsuccess = () => {
-                        console.log('✓ Image produit supprimée:', productId);
-                        resolve();
-                    };
-
-                    request.onerror = () => {
-                        reject(request.error);
-                    };
-                });
-            },
-
-            // Calculer l'utilisation du stockage
-            getStorageUsage: function() {
-                return new Promise(async (resolve, reject) => {
-                    if (navigator.storage && navigator.storage.estimate) {
-                        try {
-                            const estimate = await navigator.storage.estimate();
-                            const usedMB = (estimate.usage / (1024 * 1024)).toFixed(2);
-                            const quotaMB = (estimate.quota / (1024 * 1024)).toFixed(2);
-                            const percentage = Math.round((estimate.usage / estimate.quota) * 100);
-
-                            resolve({
-                                used: usedMB,
-                                total: quotaMB,
-                                percentage: percentage
-                            });
-                        } catch (error) {
-                            reject(error);
-                        }
-                    } else {
-                        // Fallback pour navigateurs anciens
-                        resolve({
-                            used: '?',
-                            total: '~100',
-                            percentage: 0
-                        });
-                    }
-                });
-            }
-        };
+        // Images gerees via Cloudinary (serveur) - plus besoin d'IndexedDB
 
         async function initAdminSystem() {
-            // Initialiser IndexedDB pour les images
-            try {
-                await ImageDB.init();
-                console.log('✅ Système d\'images IndexedDB prêt');
-
-                // Migrer les anciennes images de localStorage vers IndexedDB
-                await migrateOldImages();
-            } catch (error) {
-                console.error('⚠️ Erreur initialisation IndexedDB:', error);
-                await customAlert('Le système de stockage d\'images avancé n\'est pas disponible. Les images seront limitées.', 'Avertissement', 'warning');
-            }
-
-            if (!localStorage.getItem('alphamouv_admin')) {
-                localStorage.setItem('alphamouv_admin', JSON.stringify({
-                    password: DEFAULT_ADMIN_PASSWORD,
-                    admins: ['admin@alphamouv.com']
-                }));
-            }
             if (!localStorage.getItem('alphamouv_logs')) {
                 localStorage.setItem('alphamouv_logs', JSON.stringify([]));
             }
             addLog('info', 'Page boutique visitée');
-        }
-
-        // Migrer les anciennes images de localStorage vers IndexedDB
-        async function migrateOldImages() {
-            try {
-                const oldImages = JSON.parse(localStorage.getItem('alphamouv_images'));
-                if (oldImages && oldImages.products) {
-                    console.log('🔄 Migration des images vers IndexedDB...');
-                    let migrated = 0;
-                    for (const [productId, imageData] of Object.entries(oldImages.products)) {
-                        await ImageDB.saveProductImage(parseInt(productId), imageData);
-                        migrated++;
-                    }
-                    console.log(`✅ ${migrated} images migrées vers IndexedDB`);
-
-                    // Supprimer les anciennes images de localStorage pour libérer de l'espace
-                    delete oldImages.products;
-                    localStorage.setItem('alphamouv_images', JSON.stringify(oldImages));
-                    addLog('success', `Migration: ${migrated} images déplacées vers IndexedDB`);
-                }
-            } catch (error) {
-                console.error('Erreur migration:', error);
-            }
         }
 
         // Afficher les logs récents dans le dashboard
@@ -5740,61 +5435,28 @@
             }
         }
 
-        // Calculer l'utilisation du stockage (IndexedDB + localStorage)
+        // Stockage gere cote serveur (Turso + Cloudinary)
         async function calculateStorageUsage() {
-            try {
-                // Obtenir l'utilisation d'IndexedDB
-                const indexedDBUsage = await ImageDB.getStorageUsage();
-                return indexedDBUsage;
-            } catch (error) {
-                console.error('Erreur calcul stockage:', error);
-                // Fallback sur localStorage
-                let total = 0;
-                for (let key in localStorage) {
-                    if (localStorage.hasOwnProperty(key)) {
-                        total += localStorage[key].length + key.length;
-                    }
-                }
-                const estimatedLimit = 5 * 1024 * 1024; // 5MB
-                const usedKB = (total / 1024).toFixed(2);
-                const totalKB = (estimatedLimit / 1024).toFixed(0);
-                const percentage = Math.min(100, Math.round((total / estimatedLimit) * 100));
-
-                return {
-                    used: usedKB,
-                    total: totalKB,
-                    percentage: percentage
-                };
-            }
+            return { used: '-', total: 'cloud', percentage: 0 };
         }
 
         async function loadProductsManager() {
             const grid = document.getElementById('productsGrid');
-
-            // Charger toutes les images depuis IndexedDB
-            try {
-                const images = await ImageDB.getAllProductImages();
-
-                grid.innerHTML = products.map(product => {
-                    const customImg = images[product.id] || null;
-                    return `<div class="image-card">
-                        <div class="image-preview">
-                            ${customImg ? `<img src="${customImg}" alt="${product.name}">` : `<span class="placeholder-icon">${product.icon}</span>`}
+            grid.innerHTML = products.map(product => {
+                return `<div class="image-card">
+                    <div class="image-preview">
+                        ${product.image ? `<img src="${product.image}" alt="${product.name}">` : `<span class="placeholder-icon">${product.icon}</span>`}
+                    </div>
+                    <div class="image-info">
+                        <h4>${product.name}</h4>
+                        <p>${product.price}€ - ${product.category}</p>
+                        <div class="image-actions">
+                            <button class="btn-change-image" onclick="selectProductImage(${product.id})">Changer image</button>
+                            ${product.image ? `<button class="btn-remove-image" onclick="removeProductImage(${product.id})">Supprimer</button>` : ''}
                         </div>
-                        <div class="image-info">
-                            <h4>${product.name}</h4>
-                            <p>${product.price}€ - ${product.category}</p>
-                            <div class="image-actions">
-                                <button class="btn-change-image" onclick="selectProductImage(${product.id})">Changer image</button>
-                                ${customImg ? `<button class="btn-remove-image" onclick="removeProductImage(${product.id})">Supprimer</button>` : ''}
-                            </div>
-                        </div>
-                    </div>`;
-                }).join('');
-            } catch (error) {
-                console.error('Erreur chargement images:', error);
-                grid.innerHTML = '<p style="color: #ef4444;">Erreur de chargement des images</p>';
-            }
+                    </div>
+                </div>`;
+            }).join('');
         }
 
         function selectProductImage(productId) {
@@ -5864,31 +5526,32 @@
 
         async function saveProductImage(productId, imageData) {
             try {
-                // Sauvegarder dans IndexedDB au lieu de localStorage
-                await ImageDB.saveProductImage(productId, imageData);
-                console.log('✅ Image sauvegardée dans IndexedDB (capacité étendue)');
+                // Upload vers Cloudinary via l'API serveur
+                const imageUrl = await uploadToCloudinary(imageData);
 
-                // Mettre à jour le produit en mémoire
+                // Mettre a jour le produit sur le serveur
+                const token = localStorage.getItem('alphamouv_token');
                 const product = products.find(p => p.id === productId);
-                if (product) {
-                    product.image = imageData;
-                    console.log('✓ Produit mis à jour:', product.name);
-                }
+                await fetch(window.location.origin + '/api/products/' + productId, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ image: imageUrl })
+                });
 
+                // Recharger les produits depuis l'API
+                await loadProductsFromAPI();
                 renderProducts();
                 await loadProductsManager();
                 addLog('success', 'Image produit modifiée: ID ' + productId);
 
-                // Afficher l'utilisation du stockage
-                const storage = await ImageDB.getStorageUsage();
                 await customAlert(
-                    `<strong>Produit:</strong> ${product ? product.name : productId}<br><br><strong>Stockage IndexedDB:</strong><br>${storage.used} MB / ${storage.total} MB (${storage.percentage}%)`,
-                    'Image mise à jour avec succès!',
+                    `<strong>Produit:</strong> ${product ? product.name : productId}<br><br>Image uploadee sur Cloudinary avec succes.`,
+                    'Image mise a jour!',
                     'success'
                 );
 
             } catch (error) {
-                console.error('❌ Erreur lors de la sauvegarde:', error);
+                console.error('Erreur lors de la sauvegarde:', error);
                 await customAlert('Erreur lors de la sauvegarde:<br>' + error.message, 'Erreur', 'error');
                 addLog('error', 'Erreur sauvegarde image: ' + error.message);
             }
@@ -5899,13 +5562,17 @@
             if (!confirmed) return;
 
             try {
-                await ImageDB.deleteProductImage(productId);
-                const product = products.find(p => p.id === productId);
-                if (product) product.image = null;
+                const token = localStorage.getItem('alphamouv_token');
+                await fetch(window.location.origin + '/api/products/' + productId, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ image: null, images: [] })
+                });
+
+                await loadProductsFromAPI();
                 renderProducts();
                 await loadProductsManager();
-                addLog('info', 'Image produit supprimée: ' + productId);
-                console.log('✓ Image supprimée de IndexedDB');
+                addLog('info', 'Image produit supprimee: ' + productId);
             } catch (error) {
                 console.error('Erreur suppression:', error);
                 await customAlert('Erreur lors de la suppression: ' + error.message, 'Erreur', 'error');
@@ -5981,9 +5648,8 @@
             try {
                 const backup = JSON.parse(backupData);
 
-                if (backup.products) {
-                    localStorage.setItem('alphamouv_products', JSON.stringify(backup.products));
-                    products = backup.products;
+                if (backup.config) {
+                    localStorage.setItem('alphamouv_boutique_config', JSON.stringify(backup.config));
                 }
 
                 addLog('success', 'Backup J-' + index + ' restaurée avec succès');
@@ -6024,27 +5690,7 @@
             loadLogs();
         }
 
-        // Charger les images sauvegardées au démarrage depuis IndexedDB
-        async function loadSavedProductImages() {
-            try {
-                const images = await ImageDB.getAllProductImages();
-                products.forEach(product => {
-                    if (images[product.id]) {
-                        product.image = images[product.id];
-                    }
-                });
-                console.log('✓ Images produits chargées depuis IndexedDB');
-            } catch (error) {
-                console.error('Erreur chargement images:', error);
-            }
-        }
-
         // ========== FONCTIONS GESTION PRODUITS ==========
-
-        // Sauvegarder les produits dans localStorage
-        function saveProducts() {
-            localStorage.setItem('alphamouv_products', JSON.stringify(products));
-        }
 
         // Ouvrir le formulaire pour ajouter un produit
         function openProductForm() {
@@ -6212,13 +5858,9 @@
                     images: uploadedImages
                 };
 
-                const apiUrl = window.location.hostname === 'localhost'
-                    ? 'http://localhost:3000/api'
-                    : window.location.origin + '/api';
-
                 if (currentEditingProduct) {
                     // Modification via API
-                    await fetch(apiUrl + '/products/' + currentEditingProduct.id, {
+                    await fetch(window.location.origin + '/api/products/' + currentEditingProduct.id, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
                         body: JSON.stringify(serverData)
@@ -6226,7 +5868,7 @@
                     addLog('info', `Produit modifié: ${serverData.nom}`);
                 } else {
                     // Ajout via API
-                    await fetch(apiUrl + '/products', {
+                    await fetch(window.location.origin + '/api/products', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
                         body: JSON.stringify(serverData)
@@ -6298,11 +5940,7 @@
 
             try {
                 const token = localStorage.getItem('alphamouv_token');
-                const apiUrl = window.location.hostname === 'localhost'
-                    ? 'http://localhost:3000/api'
-                    : window.location.origin + '/api';
-
-                await fetch(apiUrl + '/products/' + productId, {
+                await fetch(window.location.origin + '/api/products/' + productId, {
                     method: 'DELETE',
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
@@ -6371,24 +6009,15 @@
             return labels[category] || category;
         }
 
-        // Afficher le bouton admin
+        // Afficher le bouton admin (visible si connecte avec token)
         function checkAdminAccess() {
-            const currentUser = JSON.parse(localStorage.getItem('alphamouv_user'));
-            const adminData = JSON.parse(localStorage.getItem('alphamouv_admin')) || {};
+            const token = localStorage.getItem('alphamouv_token');
             const adminToggleBtn = document.getElementById('adminSidebarToggle');
-
-            // MODE DÉVELOPPEMENT : Afficher toujours le bouton admin
-            // Pour sécuriser en production, décommentez la condition ci-dessous :
-            /*
-            if (currentUser && adminData.admins && adminData.admins.includes(currentUser.email)) {
+            if (token) {
                 adminToggleBtn.classList.add('visible');
             } else {
                 adminToggleBtn.classList.remove('visible');
             }
-            */
-
-            // MODE DEV : Toujours visible
-            adminToggleBtn.classList.add('visible');
         }
 
         // Basculer la sidebar admin
@@ -6820,7 +6449,7 @@
             }
         }
 
-        // Mettre à jour les statistiques du dashboard
+        // Mettre a jour les statistiques du dashboard
         function updateAdminStats() {
             const statProducts = document.getElementById('statProducts');
             const statCartItems = document.getElementById('statCartItems');
@@ -6829,32 +6458,13 @@
 
             if (statProducts) statProducts.textContent = products.length;
             if (statCartItems) statCartItems.textContent = cart.reduce((sum, item) => sum + item.quantity, 0);
-
-            // Calculer le nombre d'utilisateurs
-            const users = JSON.parse(localStorage.getItem('alphamouv_users')) || {};
-            if (statUsers) statUsers.textContent = Object.keys(users).length;
-
-            // Calculer l'utilisation du stockage
-            let totalSize = 0;
-            for (let key in localStorage) {
-                if (localStorage.hasOwnProperty(key)) {
-                    totalSize += localStorage[key].length + key.length;
-                }
-            }
-            const usagePercent = Math.round((totalSize / (5 * 1024 * 1024)) * 100); // Estimation 5MB max
+            if (statUsers) statUsers.textContent = '-';
             if (statStorage) {
-                statStorage.textContent = usagePercent + '%';
-                // Changer la couleur selon l'utilisation
-                if (usagePercent > 80) {
-                    statStorage.style.color = '#ef4444'; // Rouge
-                } else if (usagePercent > 60) {
-                    statStorage.style.color = '#eab308'; // Jaune
-                } else {
-                    statStorage.style.color = '#22c55e'; // Vert
-                }
+                statStorage.textContent = 'Cloud';
+                statStorage.style.color = '#22c55e';
             }
 
-            // Charger les logs récents
+            // Charger les logs recents
             loadRecentLogs();
         }
 
@@ -6862,12 +6472,9 @@
         window.addEventListener('DOMContentLoaded', async function() {
             await initAdminSystem();
 
-            // Charger les produits depuis l'API serveur (Turso)
+            // Charger les produits depuis l'API serveur (Turso + Cloudinary)
             await loadProductsFromAPI();
             filteredProducts = [...products];
-
-            // Fallback: charger les images IndexedDB pour les anciens produits locaux
-            await loadSavedProductImages();
 
             renderProducts();
             checkAdminAccess();
@@ -7564,7 +7171,7 @@
 
         function createAutoBackup() {
             var config = JSON.parse(localStorage.getItem('alphamouv_boutique_config')) || {};
-            var productsData = JSON.parse(localStorage.getItem('alphamouv_products')) || [];
+            var productsData = products;
 
             // Décaler les backups existantes (J-1 devient J-2, etc.)
             for (var i = 7; i > 1; i--) {
@@ -7866,7 +7473,6 @@
 
         // Ajouter au panier depuis la wishlist
         function addWishlistToCart(productId) {
-            var products = JSON.parse(localStorage.getItem('alphamouv_products')) || [];
             var product = products.find(function(p) { return p.id === productId; });
             if (product) {
                 addToCart(product);
@@ -7983,9 +7589,8 @@
             }
         }
 
-        // Charger les collections (regroupement par type/catégorie)
+        // Charger les collections (regroupement par type/categorie)
         function loadCollections() {
-            var products = JSON.parse(localStorage.getItem('alphamouv_products')) || [];
             var collectionsGrid = document.getElementById('collectionsGrid');
             var collectionsEmpty = document.getElementById('collectionsEmpty');
 

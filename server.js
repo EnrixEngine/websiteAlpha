@@ -895,12 +895,27 @@ app.post('/api/products', authenticateToken, isAdmin, async (req, res) => {
 
 app.put('/api/products/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
-        const { nom, description, prix, prix_promo, image, images, tailles, categorie, type, stock, actif } = req.body;
+        // Charger le produit existant pour ne modifier que les champs fournis
+        const existing = await dbGet('SELECT * FROM products WHERE id = ?', [req.params.id]);
+        if (!existing) return res.status(404).json({ error: 'Produit introuvable' });
+
+        const b = req.body;
+        const nom = b.nom !== undefined ? b.nom : existing.nom;
+        const description = b.description !== undefined ? b.description : existing.description;
+        const prix = b.prix !== undefined ? b.prix : existing.prix;
+        const prix_promo = b.prix_promo !== undefined ? b.prix_promo : existing.prix_promo;
+        const image = b.image !== undefined ? b.image : existing.image;
+        const images = b.images !== undefined ? JSON.stringify(b.images || []) : existing.images;
+        const tailles = b.tailles !== undefined ? JSON.stringify(b.tailles || []) : existing.tailles;
+        const categorie = b.categorie !== undefined ? b.categorie : existing.categorie;
+        const type = b.type !== undefined ? b.type : (existing.type || '');
+        const stock = b.stock !== undefined ? b.stock : existing.stock;
+        const actif = b.actif !== undefined ? b.actif : existing.actif;
 
         await dbRun(`
             UPDATE products SET nom = ?, description = ?, prix = ?, prix_promo = ?, image = ?, images = ?, tailles = ?, categorie = ?, type = ?, stock = ?, actif = ?
             WHERE id = ?
-        `, [nom, description, prix, prix_promo, image, JSON.stringify(images || []), JSON.stringify(tailles || []), categorie, type || '', stock, actif, req.params.id]);
+        `, [nom, description, prix, prix_promo, image, images, tailles, categorie, type, stock, actif, req.params.id]);
 
         res.json({ success: true });
     } catch (error) {

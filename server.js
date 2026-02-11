@@ -13,6 +13,7 @@ const multer = require('multer');
 const fsPromises = require('fs').promises;
 const cloudinary = require('cloudinary').v2;
 const crypto = require('crypto');
+const { createClient } = require('@libsql/client');
 
 // ==================== LOGGER ====================
 const isProduction = process.env.NODE_ENV === 'production';
@@ -294,13 +295,12 @@ const upload = multer({
     fileFilter: fileFilter
 });
 
-// ==================== BASE DE DONNEES SQL.JS ====================
+// ==================== BASE DE DONNEES TURSO ====================
 
 let db;
-const DB_PATH = path.join(__dirname, 'alphamouv.db');
 
 // Creer toutes les tables de la base de donnees
-function createTables() {
+async function createTables() {
     const tables = [
         `CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -372,7 +372,7 @@ function createTables() {
         )`,
     ];
     for (const sql of tables) {
-        db.run(sql);
+        await db.execute(sql);
     }
 }
 
@@ -381,19 +381,17 @@ const VALID_TABLES = ['users', 'products', 'orders', 'newsletter', 'events', 'ga
 const VALID_IDENTIFIER = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
 // Ajouter une colonne si elle n'existe pas
-function addColumnIfMissing(table, column, definition) {
+async function addColumnIfMissing(table, column, definition) {
     if (!VALID_TABLES.includes(table) || !VALID_IDENTIFIER.test(column)) {
         logger.error(`Migration: identifiant invalide (table=${table}, column=${column})`);
         return;
     }
     try {
-        const info = db.exec(`PRAGMA table_info(${table})`);
-        if (info.length > 0) {
-            const columns = info[0].values.map(col => col[1]);
-            if (!columns.includes(column)) {
-                db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
-                logger.info(`Migration: colonne ${column} ajoutee a ${table}`);
-            }
+        const info = await db.execute(`PRAGMA table_info(${table})`);
+        const columns = info.rows.map(row => row.name);
+        if (!columns.includes(column)) {
+            await db.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+            logger.info(`Migration: colonne ${column} ajoutee a ${table}`);
         }
     } catch (err) {
         logger.info(`Migration ${table}: `, err.message);
@@ -401,35 +399,35 @@ function addColumnIfMissing(table, column, definition) {
 }
 
 // Executer toutes les migrations de schema
-function runMigrations() {
-    addColumnIfMissing('orders', 'stripe_session_id', 'TEXT');
-    addColumnIfMissing('orders', 'status', 'TEXT DEFAULT "pending"');
-    addColumnIfMissing('orders', 'shipping_address', 'TEXT');
-    addColumnIfMissing('orders', 'paid_at', 'TEXT');
-    addColumnIfMissing('orders', 'promo_code', 'TEXT');
-    addColumnIfMissing('orders', 'discount_amount', 'REAL DEFAULT 0');
-    addColumnIfMissing('products', 'stock', 'INTEGER DEFAULT 0');
-    addColumnIfMissing('users', 'auth_provider', 'TEXT DEFAULT "email"');
-    addColumnIfMissing('instagram_posts', 'video', 'TEXT DEFAULT ""');
+async function runMigrations() {
+    await addColumnIfMissing('orders', 'stripe_session_id', 'TEXT');
+    await addColumnIfMissing('orders', 'status', 'TEXT DEFAULT "pending"');
+    await addColumnIfMissing('orders', 'shipping_address', 'TEXT');
+    await addColumnIfMissing('orders', 'paid_at', 'TEXT');
+    await addColumnIfMissing('orders', 'promo_code', 'TEXT');
+    await addColumnIfMissing('orders', 'discount_amount', 'REAL DEFAULT 0');
+    await addColumnIfMissing('products', 'stock', 'INTEGER DEFAULT 0');
+    await addColumnIfMissing('users', 'auth_provider', 'TEXT DEFAULT "email"');
+    await addColumnIfMissing('instagram_posts', 'video', 'TEXT DEFAULT ""');
 }
 
 // Creer ou mettre a jour le compte admin
-function setupAdmin() {
+async function setupAdmin() {
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@alphamouv.com';
     const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
     const BCRYPT_ROUNDS = 10;
     const hashedPassword = bcrypt.hashSync(adminPassword, BCRYPT_ROUNDS);
     const encryptedAdminEmail = encryptData(adminEmail);
 
-    const adminResult = db.exec("SELECT id FROM users WHERE role = 'admin'");
-    if (adminResult.length === 0 || adminResult[0].values.length === 0) {
-        db.run(
+    const admin = await dbGet("SELECT id FROM users WHERE role = 'admin'");
+    if (!admin) {
+        await dbRun(
             'INSERT INTO users (email, password, nom, prenom, role) VALUES (?, ?, ?, ?, ?)',
             [encryptedAdminEmail, hashedPassword, 'Admin', 'AlphaMouv', 'admin']
         );
         logger.info('Admin cree');
     } else {
-        db.run(
+        await dbRun(
             'UPDATE users SET email = ?, password = ? WHERE role = ?',
             [encryptedAdminEmail, hashedPassword, 'admin']
         );
@@ -438,24 +436,16 @@ function setupAdmin() {
 }
 
 async function initDatabase() {
-    const initSqlJs = require('sql.js');
-    const SQL = await initSqlJs();
+    db = createClient({
+        url: process.env.TURSO_DATABASE_URL,
+        authToken: process.env.TURSO_AUTH_TOKEN,
+    });
 
-    try {
-        await fsPromises.access(DB_PATH);
-        const fileBuffer = await fsPromises.readFile(DB_PATH);
-        db = new SQL.Database(fileBuffer);
-        logger.info('Base de donnees chargee');
-    } catch {
-        db = new SQL.Database();
-        logger.info('Nouvelle base de donnees creee');
-    }
-
-    createTables();
-    runMigrations();
-    setupAdmin();
+    await createTables();
+    await runMigrations();
+    await setupAdmin();
     await migrateEncryption();
-    saveDatabase();
+    logger.info('Base de donnees Turso connectee');
 }
 
 // Migration pour chiffrer les donnees existantes et migrer CBC vers GCM
@@ -493,7 +483,7 @@ async function migrateEncryption() {
     };
 
     // Migrer les utilisateurs
-    const users = dbAll('SELECT id, email, adresse, telephone FROM users');
+    const users = await dbAll('SELECT id, email, adresse, telephone FROM users');
     let usersMigrated = 0;
     for (const user of users) {
         const emailUpdate = migrateField(user.email);
@@ -501,7 +491,7 @@ async function migrateEncryption() {
         const telephoneUpdate = migrateField(user.telephone);
 
         if (emailUpdate || adresseUpdate || telephoneUpdate) {
-            db.run(`
+            await dbRun(`
                 UPDATE users SET
                     email = COALESCE(?, email),
                     adresse = COALESCE(?, adresse),
@@ -516,12 +506,12 @@ async function migrateEncryption() {
     }
 
     // Migrer la newsletter
-    const subscribers = dbAll('SELECT id, email FROM newsletter');
+    const subscribers = await dbAll('SELECT id, email FROM newsletter');
     let newsletterMigrated = 0;
     for (const sub of subscribers) {
         const emailUpdate = migrateField(sub.email);
         if (emailUpdate) {
-            db.run('UPDATE newsletter SET email = ? WHERE id = ?', [emailUpdate, sub.id]);
+            await dbRun('UPDATE newsletter SET email = ? WHERE id = ?', [emailUpdate, sub.id]);
             newsletterMigrated++;
         }
     }
@@ -532,47 +522,39 @@ async function migrateEncryption() {
     logger.info('Chiffrement des donnees verifie');
 }
 
-function saveDatabase() {
-    const dbExport = db.export();
-    const buffer = Buffer.from(dbExport);
-    fsPromises.writeFile(DB_PATH, buffer).catch(err => {
-        logger.error('Erreur sauvegarde base de donnees:', err);
-    });
-}
-
 // Decrementer le stock des produits d'une commande
-function decrementOrderStock(orderItems) {
+async function decrementOrderStock(orderItems) {
     const items = JSON.parse(orderItems || '[]');
     for (const item of items) {
-        const product = dbGet('SELECT stock FROM products WHERE id = ?', [item.id]);
+        const product = await dbGet('SELECT stock FROM products WHERE id = ?', [item.id]);
         if (product) {
             const newStock = Math.max(0, product.stock - (item.quantity || 1));
-            dbRun('UPDATE products SET stock = ? WHERE id = ?', [newStock, item.id]);
+            await dbRun('UPDATE products SET stock = ? WHERE id = ?', [newStock, item.id]);
         }
     }
 }
 
 // Traiter une commande apres paiement confirme
 async function processCompletedPayment(order) {
-    dbRun(
+    await dbRun(
         "UPDATE orders SET status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE stripe_session_id = ?",
         [order.stripe_session_id]
     );
 
     try {
-        decrementOrderStock(order.items);
+        await decrementOrderStock(order.items);
     } catch (err) {
         logger.error('Erreur decrementation stock:', err);
     }
 
     if (order.promo_code) {
-        dbRun(
+        await dbRun(
             'UPDATE promo_codes SET used_count = used_count + 1 WHERE code = ?',
             [order.promo_code]
         );
     }
 
-    const user = dbGet('SELECT * FROM users WHERE id = ?', [order.user_id]);
+    const user = await dbGet('SELECT * FROM users WHERE id = ?', [order.user_id]);
     if (user) {
         const email = decryptData(user.email);
         const name = user.prenom
@@ -582,34 +564,20 @@ async function processCompletedPayment(order) {
     }
 }
 
-// Helpers pour simplifier les requetes
-function dbGet(sql, params = []) {
-    const stmt = db.prepare(sql);
-    stmt.bind(params);
-    if (stmt.step()) {
-        const row = stmt.getAsObject();
-        stmt.free();
-        return row;
-    }
-    stmt.free();
-    return null;
+// Helpers pour simplifier les requetes (async - Turso)
+async function dbGet(sql, params = []) {
+    const result = await db.execute({ sql, args: params });
+    return result.rows[0] || null;
 }
 
-function dbAll(sql, params = []) {
-    const stmt = db.prepare(sql);
-    stmt.bind(params);
-    const results = [];
-    while (stmt.step()) {
-        results.push(stmt.getAsObject());
-    }
-    stmt.free();
-    return results;
+async function dbAll(sql, params = []) {
+    const result = await db.execute({ sql, args: params });
+    return result.rows;
 }
 
-function dbRun(sql, params = []) {
-    db.run(sql, params);
-    saveDatabase();
-    return { lastID: db.exec("SELECT last_insert_rowid()")[0]?.values[0]?.[0] };
+async function dbRun(sql, params = []) {
+    const result = await db.execute({ sql, args: params });
+    return { lastID: Number(result.lastInsertRowid) };
 }
 
 // ==================== MIDDLEWARE AUTH ====================
@@ -675,7 +643,7 @@ app.post('/api/auth/google', authLimiter, async (req, res) => {
         const prenom = googleUser.given_name || googleUser.name || '';
 
         // Chercher l'utilisateur avec email chiffre ou non
-        const allUsers = dbAll('SELECT * FROM users');
+        const allUsers = await dbAll('SELECT * FROM users');
         let user = allUsers.find(u => {
             const decryptedEmail = decryptData(u.email);
             return decryptedEmail === email || u.email === email;
@@ -685,7 +653,7 @@ app.post('/api/auth/google', authLimiter, async (req, res) => {
             // Creer un nouvel utilisateur Google avec email chiffre
             const randomPassword = bcrypt.hashSync(Math.random().toString(36), 10);
             const encryptedEmail = encryptData(email);
-            const result = dbRun(`
+            const result = await dbRun(`
                 INSERT INTO users (email, password, nom, prenom, role, auth_provider)
                 VALUES (?, ?, ?, ?, ?, ?)
             `, [encryptedEmail, randomPassword, nom, prenom, 'user', 'google']);
@@ -732,7 +700,7 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
         const { email, password, nom, prenom, adresse, code_postal, ville, telephone } = req.body;
 
         // Rechercher avec email chiffre ou non (pour compatibilite)
-        const allUsers = dbAll('SELECT id, email FROM users');
+        const allUsers = await dbAll('SELECT id, email FROM users');
         const existingUser = allUsers.find(u => {
             const decryptedEmail = decryptData(u.email);
             return decryptedEmail === email || u.email === email;
@@ -749,7 +717,7 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
         const encryptedAdresse = adresse ? encryptData(adresse) : null;
         const encryptedTelephone = telephone ? encryptData(telephone) : null;
 
-        const result = dbRun(`
+        const result = await dbRun(`
             INSERT INTO users (email, password, nom, prenom, adresse, code_postal, ville, telephone)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `, [encryptedEmail, hashedPassword, nom, prenom, encryptedAdresse, code_postal, ville, encryptedTelephone]);
@@ -777,7 +745,7 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
         const { email, password } = req.body;
 
         // Rechercher l'utilisateur avec email chiffre ou non
-        const allUsers = dbAll('SELECT * FROM users');
+        const allUsers = await dbAll('SELECT * FROM users');
         const user = allUsers.find(u => {
             const decryptedEmail = decryptData(u.email);
             return decryptedEmail === email || u.email === email;
@@ -822,9 +790,9 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     }
 });
 
-app.get('/api/auth/profile', authenticateToken, (req, res) => {
+app.get('/api/auth/profile', authenticateToken, async (req, res) => {
     try {
-        const user = dbGet('SELECT id, email, nom, prenom, adresse, code_postal, ville, telephone, role FROM users WHERE id = ?', [req.user.id]);
+        const user = await dbGet('SELECT id, email, nom, prenom, adresse, code_postal, ville, telephone, role FROM users WHERE id = ?', [req.user.id]);
         if (!user) {
             return res.status(404).json({ error: 'Utilisateur non trouve' });
         }
@@ -840,7 +808,7 @@ app.get('/api/auth/profile', authenticateToken, (req, res) => {
     }
 });
 
-app.put('/api/auth/profile', authenticateToken, (req, res) => {
+app.put('/api/auth/profile', authenticateToken, async (req, res) => {
     try {
         const { nom, prenom, adresse, code_postal, ville, telephone } = req.body;
 
@@ -848,7 +816,7 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
         const encryptedAdresse = adresse ? encryptData(adresse) : null;
         const encryptedTelephone = telephone ? encryptData(telephone) : null;
 
-        dbRun(`
+        await dbRun(`
             UPDATE users SET nom = ?, prenom = ?, adresse = ?, code_postal = ?, ville = ?, telephone = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         `, [nom, prenom, encryptedAdresse, code_postal, ville, encryptedTelephone, req.user.id]);
@@ -859,18 +827,18 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
     }
 });
 
-app.put('/api/auth/password', authenticateToken, (req, res) => {
+app.put('/api/auth/password', authenticateToken, async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
 
-        const user = dbGet('SELECT password FROM users WHERE id = ?', [req.user.id]);
+        const user = await dbGet('SELECT password FROM users WHERE id = ?', [req.user.id]);
 
         if (!bcrypt.compareSync(currentPassword, user.password)) {
             return res.status(400).json({ error: 'Mot de passe actuel incorrect' });
         }
 
         const hashedPassword = bcrypt.hashSync(newPassword, 10);
-        dbRun('UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [hashedPassword, req.user.id]);
+        await dbRun('UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [hashedPassword, req.user.id]);
 
         res.json({ success: true, message: 'Mot de passe modifie' });
     } catch (error) {
@@ -880,9 +848,9 @@ app.put('/api/auth/password', authenticateToken, (req, res) => {
 
 // ==================== API PRODUITS ====================
 
-app.get('/api/products', (req, res) => {
+app.get('/api/products', async (req, res) => {
     try {
-        const products = dbAll('SELECT * FROM products WHERE actif = 1 ORDER BY created_at DESC');
+        const products = await dbAll('SELECT * FROM products WHERE actif = 1 ORDER BY created_at DESC');
         res.json(products.map(p => ({
             ...p,
             images: p.images ? JSON.parse(p.images) : [],
@@ -893,9 +861,9 @@ app.get('/api/products', (req, res) => {
     }
 });
 
-app.get('/api/products/:id', (req, res) => {
+app.get('/api/products/:id', async (req, res) => {
     try {
-        const product = dbGet('SELECT * FROM products WHERE id = ?', [req.params.id]);
+        const product = await dbGet('SELECT * FROM products WHERE id = ?', [req.params.id]);
         if (!product) {
             return res.status(404).json({ error: 'Produit non trouve' });
         }
@@ -909,11 +877,11 @@ app.get('/api/products/:id', (req, res) => {
     }
 });
 
-app.post('/api/products', authenticateToken, isAdmin, (req, res) => {
+app.post('/api/products', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { nom, description, prix, prix_promo, image, images, tailles, categorie, stock } = req.body;
 
-        const result = dbRun(`
+        const result = await dbRun(`
             INSERT INTO products (nom, description, prix, prix_promo, image, images, tailles, categorie, stock)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [nom, description, prix, prix_promo, image, JSON.stringify(images || []), JSON.stringify(tailles || []), categorie, stock || 0]);
@@ -924,11 +892,11 @@ app.post('/api/products', authenticateToken, isAdmin, (req, res) => {
     }
 });
 
-app.put('/api/products/:id', authenticateToken, isAdmin, (req, res) => {
+app.put('/api/products/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { nom, description, prix, prix_promo, image, images, tailles, categorie, stock, actif } = req.body;
 
-        dbRun(`
+        await dbRun(`
             UPDATE products SET nom = ?, description = ?, prix = ?, prix_promo = ?, image = ?, images = ?, tailles = ?, categorie = ?, stock = ?, actif = ?
             WHERE id = ?
         `, [nom, description, prix, prix_promo, image, JSON.stringify(images || []), JSON.stringify(tailles || []), categorie, stock, actif, req.params.id]);
@@ -939,9 +907,9 @@ app.put('/api/products/:id', authenticateToken, isAdmin, (req, res) => {
     }
 });
 
-app.delete('/api/products/:id', authenticateToken, isAdmin, (req, res) => {
+app.delete('/api/products/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
-        dbRun('DELETE FROM products WHERE id = ?', [req.params.id]);
+        await dbRun('DELETE FROM products WHERE id = ?', [req.params.id]);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Erreur lors de la suppression' });
@@ -950,12 +918,12 @@ app.delete('/api/products/:id', authenticateToken, isAdmin, (req, res) => {
 
 // ==================== API COMMANDES ====================
 
-app.post('/api/orders', authenticateToken, (req, res) => {
+app.post('/api/orders', authenticateToken, async (req, res) => {
     try {
         const { items, adresse_livraison, total } = req.body;
         const numero = 'CMD-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11).toUpperCase();
 
-        const result = dbRun(`
+        const result = await dbRun(`
             INSERT INTO orders (user_id, numero, total, adresse_livraison, items)
             VALUES (?, ?, ?, ?, ?)
         `, [req.user.id, numero, total, adresse_livraison, JSON.stringify(items)]);
@@ -966,9 +934,9 @@ app.post('/api/orders', authenticateToken, (req, res) => {
     }
 });
 
-app.get('/api/orders', authenticateToken, (req, res) => {
+app.get('/api/orders', authenticateToken, async (req, res) => {
     try {
-        const orders = dbAll('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC', [req.user.id]);
+        const orders = await dbAll('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC', [req.user.id]);
         res.json(orders.map(o => ({
             ...o,
             items: JSON.parse(o.items || '[]')
@@ -978,9 +946,9 @@ app.get('/api/orders', authenticateToken, (req, res) => {
     }
 });
 
-app.get('/api/admin/orders', authenticateToken, isAdmin, (req, res) => {
+app.get('/api/admin/orders', authenticateToken, isAdmin, async (req, res) => {
     try {
-        const orders = dbAll(`
+        const orders = await dbAll(`
             SELECT o.*, u.email, u.nom, u.prenom
             FROM orders o
             LEFT JOIN users u ON o.user_id = u.id
@@ -997,10 +965,10 @@ app.get('/api/admin/orders', authenticateToken, isAdmin, (req, res) => {
     }
 });
 
-app.put('/api/admin/orders/:id', authenticateToken, isAdmin, (req, res) => {
+app.put('/api/admin/orders/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { statut } = req.body;
-        dbRun('UPDATE orders SET statut = ? WHERE id = ?', [statut, req.params.id]);
+        await dbRun('UPDATE orders SET statut = ? WHERE id = ?', [statut, req.params.id]);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
@@ -1009,12 +977,12 @@ app.put('/api/admin/orders/:id', authenticateToken, isAdmin, (req, res) => {
 
 // ==================== API NEWSLETTER ====================
 
-app.post('/api/newsletter', (req, res) => {
+app.post('/api/newsletter', async (req, res) => {
     try {
         const { email } = req.body;
 
         // Verifier si l'email existe deja (chiffre ou non)
-        const allSubscribers = dbAll('SELECT id, email FROM newsletter');
+        const allSubscribers = await dbAll('SELECT id, email FROM newsletter');
         const existing = allSubscribers.find(s => {
             const decryptedEmail = decryptData(s.email);
             return decryptedEmail === email || s.email === email;
@@ -1026,16 +994,16 @@ app.post('/api/newsletter', (req, res) => {
 
         // Chiffrer l'email avant stockage
         const encryptedEmail = encryptData(email);
-        dbRun('INSERT INTO newsletter (email) VALUES (?)', [encryptedEmail]);
+        await dbRun('INSERT INTO newsletter (email) VALUES (?)', [encryptedEmail]);
         res.json({ success: true, message: 'Inscription reussie a la newsletter' });
     } catch (error) {
         res.status(500).json({ error: 'Erreur lors de l\'inscription' });
     }
 });
 
-app.get('/api/admin/newsletter', authenticateToken, isAdmin, (req, res) => {
+app.get('/api/admin/newsletter', authenticateToken, isAdmin, async (req, res) => {
     try {
-        const subscribers = dbAll('SELECT * FROM newsletter WHERE actif = 1 ORDER BY created_at DESC');
+        const subscribers = await dbAll('SELECT * FROM newsletter WHERE actif = 1 ORDER BY created_at DESC');
         // Dechiffrer les emails pour l'affichage admin
         res.json((subscribers || []).map(s => ({
             ...s,
@@ -1048,19 +1016,19 @@ app.get('/api/admin/newsletter', authenticateToken, isAdmin, (req, res) => {
 
 // ==================== API EVENEMENTS ====================
 
-app.get('/api/events', (req, res) => {
+app.get('/api/events', async (req, res) => {
     try {
-        const events = dbAll('SELECT * FROM events ORDER BY date DESC');
+        const events = await dbAll('SELECT * FROM events ORDER BY date DESC');
         res.json(events);
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
     }
 });
 
-app.post('/api/events', authenticateToken, isAdmin, (req, res) => {
+app.post('/api/events', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { titre, description, date, lieu, image, statut } = req.body;
-        const result = dbRun(`
+        const result = await dbRun(`
             INSERT INTO events (titre, description, date, lieu, image, statut)
             VALUES (?, ?, ?, ?, ?, ?)
         `, [titre, description, date, lieu, image, statut]);
@@ -1070,10 +1038,10 @@ app.post('/api/events', authenticateToken, isAdmin, (req, res) => {
     }
 });
 
-app.put('/api/events/:id', authenticateToken, isAdmin, (req, res) => {
+app.put('/api/events/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { titre, description, date, lieu, image, statut } = req.body;
-        dbRun(`
+        await dbRun(`
             UPDATE events SET titre = ?, description = ?, date = ?, lieu = ?, image = ?, statut = ?
             WHERE id = ?
         `, [titre, description, date, lieu, image, statut, req.params.id]);
@@ -1083,9 +1051,9 @@ app.put('/api/events/:id', authenticateToken, isAdmin, (req, res) => {
     }
 });
 
-app.delete('/api/events/:id', authenticateToken, isAdmin, (req, res) => {
+app.delete('/api/events/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
-        dbRun('DELETE FROM events WHERE id = ?', [req.params.id]);
+        await dbRun('DELETE FROM events WHERE id = ?', [req.params.id]);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
@@ -1094,19 +1062,19 @@ app.delete('/api/events/:id', authenticateToken, isAdmin, (req, res) => {
 
 // ==================== API GALERIE ====================
 
-app.get('/api/gallery', (req, res) => {
+app.get('/api/gallery', async (req, res) => {
     try {
-        const images = dbAll('SELECT * FROM gallery ORDER BY ordre ASC, created_at DESC');
+        const images = await dbAll('SELECT * FROM gallery ORDER BY ordre ASC, created_at DESC');
         res.json(images);
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
     }
 });
 
-app.post('/api/gallery', authenticateToken, isAdmin, (req, res) => {
+app.post('/api/gallery', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { titre, description, image, categorie, ordre } = req.body;
-        const result = dbRun(`
+        const result = await dbRun(`
             INSERT INTO gallery (titre, description, image, categorie, ordre)
             VALUES (?, ?, ?, ?, ?)
         `, [titre, description, image, categorie, ordre || 0]);
@@ -1116,9 +1084,9 @@ app.post('/api/gallery', authenticateToken, isAdmin, (req, res) => {
     }
 });
 
-app.delete('/api/gallery/:id', authenticateToken, isAdmin, (req, res) => {
+app.delete('/api/gallery/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
-        dbRun('DELETE FROM gallery WHERE id = ?', [req.params.id]);
+        await dbRun('DELETE FROM gallery WHERE id = ?', [req.params.id]);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
@@ -1127,19 +1095,19 @@ app.delete('/api/gallery/:id', authenticateToken, isAdmin, (req, res) => {
 
 // ==================== API CARROUSEL ====================
 
-app.get('/api/carousel', (req, res) => {
+app.get('/api/carousel', async (req, res) => {
     try {
-        const images = dbAll('SELECT * FROM carousel ORDER BY ordre ASC, created_at DESC');
+        const images = await dbAll('SELECT * FROM carousel ORDER BY ordre ASC, created_at DESC');
         res.json(images);
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
     }
 });
 
-app.post('/api/carousel', authenticateToken, isAdmin, (req, res) => {
+app.post('/api/carousel', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { titre, description, image, ordre } = req.body;
-        const result = dbRun(`
+        const result = await dbRun(`
             INSERT INTO carousel (titre, description, image, ordre)
             VALUES (?, ?, ?, ?)
         `, [titre || '', description || '', image, ordre || 0]);
@@ -1149,10 +1117,10 @@ app.post('/api/carousel', authenticateToken, isAdmin, (req, res) => {
     }
 });
 
-app.put('/api/carousel/:id', authenticateToken, isAdmin, (req, res) => {
+app.put('/api/carousel/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { titre, description, image, ordre } = req.body;
-        dbRun(`
+        await dbRun(`
             UPDATE carousel SET titre = ?, description = ?, image = ?, ordre = ?
             WHERE id = ?
         `, [titre, description, image, ordre, req.params.id]);
@@ -1162,9 +1130,9 @@ app.put('/api/carousel/:id', authenticateToken, isAdmin, (req, res) => {
     }
 });
 
-app.delete('/api/carousel/:id', authenticateToken, isAdmin, (req, res) => {
+app.delete('/api/carousel/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
-        dbRun('DELETE FROM carousel WHERE id = ?', [req.params.id]);
+        await dbRun('DELETE FROM carousel WHERE id = ?', [req.params.id]);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
@@ -1198,7 +1166,7 @@ app.post('/api/payment/create-checkout-session', authenticateToken, async (req, 
 
         // Verifier le stock disponible
         for (const item of items) {
-            const product = dbGet('SELECT stock, nom FROM products WHERE id = ?', [item.id]);
+            const product = await dbGet('SELECT stock, nom FROM products WHERE id = ?', [item.id]);
             if (product && product.stock < (item.quantity || 1)) {
                 return res.status(400).json({
                     error: `Stock insuffisant pour "${product.nom}" (${product.stock} disponible)`
@@ -1212,7 +1180,7 @@ app.post('/api/payment/create-checkout-session', authenticateToken, async (req, 
 
         // Appliquer le code promo si fourni
         if (promoCode) {
-            const promo = dbGet(`
+            const promo = await dbGet(`
                 SELECT * FROM promo_codes
                 WHERE code = ? AND active = 1
             `, [promoCode.toUpperCase()]);
@@ -1286,7 +1254,7 @@ app.post('/api/payment/create-checkout-session', authenticateToken, async (req, 
         });
 
         // Enregistrer la commande en base
-        const orderResult = dbRun(`
+        const orderResult = await dbRun(`
             INSERT INTO orders (user_id, stripe_session_id, total, status, items, promo_code, discount_amount)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         `, [
@@ -1322,7 +1290,7 @@ app.get('/api/payment/status/:sessionId', authenticateToken, async (req, res) =>
 
         // Traiter le paiement si confirme et pas encore traite
         if (session.payment_status === 'paid') {
-            const order = dbGet(
+            const order = await dbGet(
                 'SELECT * FROM orders WHERE stripe_session_id = ?',
                 [session.id]
             );
@@ -1372,9 +1340,9 @@ app.post('/api/upload', authenticateToken, upload.single('image'), async (req, r
 // ==================== API INSTAGRAM POSTS ====================
 
 // Liste des posts Instagram
-app.get('/api/instagram-posts', (req, res) => {
+app.get('/api/instagram-posts', async (req, res) => {
     try {
-        const posts = dbAll('SELECT * FROM instagram_posts ORDER BY position ASC, created_at DESC');
+        const posts = await dbAll('SELECT * FROM instagram_posts ORDER BY position ASC, created_at DESC');
         res.json(posts || []);
     } catch (error) {
         logger.error('Erreur chargement posts Instagram:', error);
@@ -1385,7 +1353,7 @@ app.get('/api/instagram-posts', (req, res) => {
 // Ajouter un post Instagram (admin)
 const instaUpload = upload.fields([{ name: 'image', maxCount: 1 }, { name: 'video', maxCount: 1 }]);
 
-app.post('/api/instagram-posts', authenticateToken, isAdmin, instaUpload, (req, res) => {
+app.post('/api/instagram-posts', authenticateToken, isAdmin, instaUpload, async (req, res) => {
     try {
         const { instagram_url, caption } = req.body;
 
@@ -1407,10 +1375,10 @@ app.post('/api/instagram-posts', authenticateToken, isAdmin, instaUpload, (req, 
             videoData = 'data:' + vidFile.mimetype + ';base64,' + Buffer.from(vidFile.buffer).toString('base64');
         }
 
-        const maxPos = dbGet('SELECT MAX(position) as maxPos FROM instagram_posts');
+        const maxPos = await dbGet('SELECT MAX(position) as maxPos FROM instagram_posts');
         const nextPos = (maxPos && maxPos.maxPos != null) ? maxPos.maxPos + 1 : 0;
 
-        const result = dbRun(
+        const result = await dbRun(
             'INSERT INTO instagram_posts (instagram_url, image, video, caption, position) VALUES (?, ?, ?, ?, ?)',
             [instagram_url, imageData, videoData, caption || '', nextPos]
         );
@@ -1423,7 +1391,7 @@ app.post('/api/instagram-posts', authenticateToken, isAdmin, instaUpload, (req, 
 });
 
 // Modifier un post Instagram (admin)
-app.put('/api/instagram-posts/:id', authenticateToken, isAdmin, instaUpload, (req, res) => {
+app.put('/api/instagram-posts/:id', authenticateToken, isAdmin, instaUpload, async (req, res) => {
     try {
         const { instagram_url, caption } = req.body;
         const postId = req.params.id;
@@ -1452,7 +1420,7 @@ app.put('/api/instagram-posts/:id', authenticateToken, isAdmin, instaUpload, (re
         }
 
         params.push(postId);
-        dbRun('UPDATE instagram_posts SET ' + updates.join(', ') + ' WHERE id = ?', params);
+        await dbRun('UPDATE instagram_posts SET ' + updates.join(', ') + ' WHERE id = ?', params);
 
         res.json({ success: true });
     } catch (error) {
@@ -1462,9 +1430,9 @@ app.put('/api/instagram-posts/:id', authenticateToken, isAdmin, instaUpload, (re
 });
 
 // Supprimer un post Instagram (admin)
-app.delete('/api/instagram-posts/:id', authenticateToken, isAdmin, (req, res) => {
+app.delete('/api/instagram-posts/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
-        dbRun('DELETE FROM instagram_posts WHERE id = ?', [req.params.id]);
+        await dbRun('DELETE FROM instagram_posts WHERE id = ?', [req.params.id]);
         res.json({ success: true });
     } catch (error) {
         logger.error('Erreur suppression post Instagram:', error);
@@ -1486,13 +1454,13 @@ app.post('/api/contact', (req, res) => {
 
 // ==================== API STATS ADMIN ====================
 
-app.get('/api/admin/stats', authenticateToken, isAdmin, (req, res) => {
+app.get('/api/admin/stats', authenticateToken, isAdmin, async (req, res) => {
     try {
-        const usersCount = dbGet('SELECT COUNT(*) as count FROM users');
-        const ordersCount = dbGet('SELECT COUNT(*) as count FROM orders');
-        const productsCount = dbGet('SELECT COUNT(*) as count FROM products WHERE actif = 1');
-        const newsletterCount = dbGet('SELECT COUNT(*) as count FROM newsletter WHERE actif = 1');
-        const revenueResult = dbGet("SELECT SUM(total) as total FROM orders WHERE statut != 'annulee'");
+        const usersCount = await dbGet('SELECT COUNT(*) as count FROM users');
+        const ordersCount = await dbGet('SELECT COUNT(*) as count FROM orders');
+        const productsCount = await dbGet('SELECT COUNT(*) as count FROM products WHERE actif = 1');
+        const newsletterCount = await dbGet('SELECT COUNT(*) as count FROM newsletter WHERE actif = 1');
+        const revenueResult = await dbGet("SELECT SUM(total) as total FROM orders WHERE statut != 'annulee'");
 
         res.json({
             users: usersCount?.count || 0,
@@ -1509,9 +1477,9 @@ app.get('/api/admin/stats', authenticateToken, isAdmin, (req, res) => {
 // ==================== API GESTION UTILISATEURS (ADMIN) ====================
 
 // Liste tous les utilisateurs
-app.get('/api/admin/users', authenticateToken, isAdmin, (req, res) => {
+app.get('/api/admin/users', authenticateToken, isAdmin, async (req, res) => {
     try {
-        const users = dbAll('SELECT id, email, nom, prenom, role, created_at FROM users ORDER BY created_at DESC');
+        const users = await dbAll('SELECT id, email, nom, prenom, role, created_at FROM users ORDER BY created_at DESC');
         // Dechiffrer les emails pour l'affichage admin
         const decryptedUsers = (users || []).map(u => {
             try {
@@ -1528,7 +1496,7 @@ app.get('/api/admin/users', authenticateToken, isAdmin, (req, res) => {
 });
 
 // Supprimer un utilisateur
-app.delete('/api/admin/users/:id', authenticateToken, isAdmin, (req, res) => {
+app.delete('/api/admin/users/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
         const userId = req.params.id;
 
@@ -1537,7 +1505,7 @@ app.delete('/api/admin/users/:id', authenticateToken, isAdmin, (req, res) => {
             return res.status(400).json({ error: 'Impossible de supprimer votre propre compte' });
         }
 
-        dbRun('DELETE FROM users WHERE id = ?', [userId]);
+        await dbRun('DELETE FROM users WHERE id = ?', [userId]);
         res.json({ success: true, message: 'Utilisateur supprime' });
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
@@ -1545,7 +1513,7 @@ app.delete('/api/admin/users/:id', authenticateToken, isAdmin, (req, res) => {
 });
 
 // Changer le role d'un utilisateur
-app.put('/api/admin/users/:id/role', authenticateToken, isAdmin, (req, res) => {
+app.put('/api/admin/users/:id/role', authenticateToken, isAdmin, async (req, res) => {
     try {
         const userId = req.params.id;
         const { role } = req.body;
@@ -1559,7 +1527,7 @@ app.put('/api/admin/users/:id/role', authenticateToken, isAdmin, (req, res) => {
             return res.status(400).json({ error: 'Impossible de modifier votre propre role' });
         }
 
-        dbRun('UPDATE users SET role = ? WHERE id = ?', [role, userId]);
+        await dbRun('UPDATE users SET role = ? WHERE id = ?', [role, userId]);
         res.json({ success: true, message: 'Role mis a jour' });
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
@@ -1569,23 +1537,23 @@ app.put('/api/admin/users/:id/role', authenticateToken, isAdmin, (req, res) => {
 // ==================== API WISHLIST ====================
 
 // Ajouter a la wishlist
-app.post('/api/wishlist', authenticateToken, (req, res) => {
+app.post('/api/wishlist', authenticateToken, async (req, res) => {
     try {
         const { product_id } = req.body;
 
         // Verifier que le produit existe
-        const product = dbGet('SELECT id FROM products WHERE id = ?', [product_id]);
+        const product = await dbGet('SELECT id FROM products WHERE id = ?', [product_id]);
         if (!product) {
             return res.status(404).json({ error: 'Produit non trouve' });
         }
 
         // Verifier si deja dans la wishlist
-        const existing = dbGet('SELECT id FROM wishlist WHERE user_id = ? AND product_id = ?', [req.user.id, product_id]);
+        const existing = await dbGet('SELECT id FROM wishlist WHERE user_id = ? AND product_id = ?', [req.user.id, product_id]);
         if (existing) {
             return res.status(400).json({ error: 'Produit deja dans la wishlist' });
         }
 
-        dbRun('INSERT INTO wishlist (user_id, product_id) VALUES (?, ?)', [req.user.id, product_id]);
+        await dbRun('INSERT INTO wishlist (user_id, product_id) VALUES (?, ?)', [req.user.id, product_id]);
         res.json({ success: true, message: 'Produit ajoute a la wishlist' });
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
@@ -1593,9 +1561,9 @@ app.post('/api/wishlist', authenticateToken, (req, res) => {
 });
 
 // Retirer de la wishlist
-app.delete('/api/wishlist/:productId', authenticateToken, (req, res) => {
+app.delete('/api/wishlist/:productId', authenticateToken, async (req, res) => {
     try {
-        dbRun('DELETE FROM wishlist WHERE user_id = ? AND product_id = ?', [req.user.id, req.params.productId]);
+        await dbRun('DELETE FROM wishlist WHERE user_id = ? AND product_id = ?', [req.user.id, req.params.productId]);
         res.json({ success: true, message: 'Produit retire de la wishlist' });
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
@@ -1603,9 +1571,9 @@ app.delete('/api/wishlist/:productId', authenticateToken, (req, res) => {
 });
 
 // Obtenir la wishlist
-app.get('/api/wishlist', authenticateToken, (req, res) => {
+app.get('/api/wishlist', authenticateToken, async (req, res) => {
     try {
-        const wishlist = dbAll(`
+        const wishlist = await dbAll(`
             SELECT w.id, w.product_id, w.created_at, p.nom, p.prix, p.prix_promo, p.image, p.images, p.stock
             FROM wishlist w
             JOIN products p ON w.product_id = p.id
@@ -1625,11 +1593,11 @@ app.get('/api/wishlist', authenticateToken, (req, res) => {
 // ==================== API CODES PROMO ====================
 
 // Verifier un code promo
-app.post('/api/promo/verify', authenticateToken, (req, res) => {
+app.post('/api/promo/verify', authenticateToken, async (req, res) => {
     try {
         const { code, orderTotal } = req.body;
 
-        const promo = dbGet(`
+        const promo = await dbGet(`
             SELECT * FROM promo_codes
             WHERE code = ? AND active = 1
         `, [code.toUpperCase()]);
@@ -1670,7 +1638,7 @@ app.post('/api/promo/verify', authenticateToken, (req, res) => {
 });
 
 // Admin: Creer un code promo
-app.post('/api/admin/promo', authenticateToken, isAdmin, (req, res) => {
+app.post('/api/admin/promo', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { code, discount_percent, max_uses, min_order_amount, expires_at } = req.body;
 
@@ -1682,7 +1650,7 @@ app.post('/api/admin/promo', authenticateToken, isAdmin, (req, res) => {
             return res.status(400).json({ error: 'Pourcentage entre 1 et 100' });
         }
 
-        const result = dbRun(`
+        const result = await dbRun(`
             INSERT INTO promo_codes (code, discount_percent, max_uses, min_order_amount, expires_at)
             VALUES (?, ?, ?, ?, ?)
         `, [code.toUpperCase(), discount_percent, max_uses || null, min_order_amount || 0, expires_at || null]);
@@ -1697,9 +1665,9 @@ app.post('/api/admin/promo', authenticateToken, isAdmin, (req, res) => {
 });
 
 // Admin: Liste des codes promo
-app.get('/api/admin/promo', authenticateToken, isAdmin, (req, res) => {
+app.get('/api/admin/promo', authenticateToken, isAdmin, async (req, res) => {
     try {
-        const promos = dbAll('SELECT * FROM promo_codes ORDER BY created_at DESC');
+        const promos = await dbAll('SELECT * FROM promo_codes ORDER BY created_at DESC');
         res.json(promos);
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
@@ -1707,11 +1675,11 @@ app.get('/api/admin/promo', authenticateToken, isAdmin, (req, res) => {
 });
 
 // Admin: Modifier un code promo
-app.put('/api/admin/promo/:id', authenticateToken, isAdmin, (req, res) => {
+app.put('/api/admin/promo/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { active, discount_percent, max_uses, min_order_amount, expires_at } = req.body;
 
-        dbRun(`
+        await dbRun(`
             UPDATE promo_codes
             SET active = ?, discount_percent = ?, max_uses = ?, min_order_amount = ?, expires_at = ?
             WHERE id = ?
@@ -1724,9 +1692,9 @@ app.put('/api/admin/promo/:id', authenticateToken, isAdmin, (req, res) => {
 });
 
 // Admin: Supprimer un code promo
-app.delete('/api/admin/promo/:id', authenticateToken, isAdmin, (req, res) => {
+app.delete('/api/admin/promo/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
-        dbRun('DELETE FROM promo_codes WHERE id = ?', [req.params.id]);
+        await dbRun('DELETE FROM promo_codes WHERE id = ?', [req.params.id]);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });
@@ -1735,33 +1703,33 @@ app.delete('/api/admin/promo/:id', authenticateToken, isAdmin, (req, res) => {
 
 // ==================== API STATS AVANCEES ====================
 
-app.get('/api/admin/stats/advanced', authenticateToken, isAdmin, (req, res) => {
+app.get('/api/admin/stats/advanced', authenticateToken, isAdmin, async (req, res) => {
     try {
         // Stats de base
-        const usersCount = dbGet('SELECT COUNT(*) as count FROM users WHERE role = "user"');
-        const ordersCount = dbGet('SELECT COUNT(*) as count FROM orders WHERE status = "paid"');
-        const productsCount = dbGet('SELECT COUNT(*) as count FROM products WHERE actif = 1');
-        const newsletterCount = dbGet('SELECT COUNT(*) as count FROM newsletter WHERE actif = 1');
+        const usersCount = await dbGet('SELECT COUNT(*) as count FROM users WHERE role = "user"');
+        const ordersCount = await dbGet('SELECT COUNT(*) as count FROM orders WHERE status = "paid"');
+        const productsCount = await dbGet('SELECT COUNT(*) as count FROM products WHERE actif = 1');
+        const newsletterCount = await dbGet('SELECT COUNT(*) as count FROM newsletter WHERE actif = 1');
 
         // Revenue total
-        const revenueResult = dbGet('SELECT SUM(total) as total FROM orders WHERE status = "paid"');
+        const revenueResult = await dbGet('SELECT SUM(total) as total FROM orders WHERE status = "paid"');
 
         // Revenue du mois
-        const monthRevenue = dbGet(`
+        const monthRevenue = await dbGet(`
             SELECT SUM(total) as total FROM orders
             WHERE status = "paid"
             AND strftime('%Y-%m', paid_at) = strftime('%Y-%m', 'now')
         `);
 
         // Commandes du mois
-        const monthOrders = dbGet(`
+        const monthOrders = await dbGet(`
             SELECT COUNT(*) as count FROM orders
             WHERE status = "paid"
             AND strftime('%Y-%m', paid_at) = strftime('%Y-%m', 'now')
         `);
 
         // Top 5 produits vendus
-        const topProducts = dbAll(`
+        const topProducts = await dbAll(`
             SELECT p.id, p.nom, p.image, SUM(1) as total_sold
             FROM orders o, json_each(o.items) as item
             JOIN products p ON json_extract(item.value, '$.id') = p.id
@@ -1772,7 +1740,7 @@ app.get('/api/admin/stats/advanced', authenticateToken, isAdmin, (req, res) => {
         `);
 
         // Produits en rupture de stock
-        const lowStock = dbAll(`
+        const lowStock = await dbAll(`
             SELECT id, nom, stock FROM products
             WHERE actif = 1 AND stock <= 5
             ORDER BY stock ASC
@@ -1780,7 +1748,7 @@ app.get('/api/admin/stats/advanced', authenticateToken, isAdmin, (req, res) => {
         `);
 
         // Dernieres commandes
-        const recentOrdersRaw = dbAll(`
+        const recentOrdersRaw = await dbAll(`
             SELECT o.id, o.total, o.status, o.created_at, u.email, u.prenom, u.nom
             FROM orders o
             LEFT JOIN users u ON o.user_id = u.id
@@ -1794,13 +1762,13 @@ app.get('/api/admin/stats/advanced', authenticateToken, isAdmin, (req, res) => {
         }));
 
         // Stats par statut de commande
-        const ordersByStatus = dbAll(`
+        const ordersByStatus = await dbAll(`
             SELECT status, COUNT(*) as count FROM orders
             GROUP BY status
         `);
 
         // Codes promo actifs
-        const activePromos = dbGet('SELECT COUNT(*) as count FROM promo_codes WHERE active = 1');
+        const activePromos = await dbGet('SELECT COUNT(*) as count FROM promo_codes WHERE active = 1');
 
         res.json({
             users: usersCount?.count || 0,
@@ -1830,10 +1798,10 @@ app.post('/api/stock/decrement', authenticateToken, async (req, res) => {
         const { items } = req.body;
 
         for (const item of items) {
-            const product = dbGet('SELECT stock FROM products WHERE id = ?', [item.id]);
+            const product = await dbGet('SELECT stock FROM products WHERE id = ?', [item.id]);
             if (product && product.stock > 0) {
                 const newStock = Math.max(0, product.stock - (item.quantity || 1));
-                dbRun('UPDATE products SET stock = ? WHERE id = ?', [newStock, item.id]);
+                await dbRun('UPDATE products SET stock = ? WHERE id = ?', [newStock, item.id]);
             }
         }
 
@@ -1844,7 +1812,7 @@ app.post('/api/stock/decrement', authenticateToken, async (req, res) => {
 });
 
 // Admin: Mettre a jour le statut d'une commande
-app.put('/api/admin/orders/:id/status', authenticateToken, isAdmin, (req, res) => {
+app.put('/api/admin/orders/:id/status', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { status } = req.body;
         const validStatuses = ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'];
@@ -1853,7 +1821,7 @@ app.put('/api/admin/orders/:id/status', authenticateToken, isAdmin, (req, res) =
             return res.status(400).json({ error: 'Statut invalide' });
         }
 
-        dbRun('UPDATE orders SET status = ? WHERE id = ?', [status, req.params.id]);
+        await dbRun('UPDATE orders SET status = ? WHERE id = ?', [status, req.params.id]);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Erreur serveur' });

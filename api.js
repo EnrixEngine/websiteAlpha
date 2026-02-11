@@ -47,6 +47,11 @@ async function apiRequest(endpoint, options = {}) {
         const data = await response.json();
 
         if (!response.ok) {
+            // Token expire ou invalide → deconnecter l'utilisateur
+            if (response.status === 401 || response.status === 403) {
+                setAuthToken(null);
+                localStorage.removeItem('alphamouv_user');
+            }
             throw new Error(data.error || 'Erreur serveur');
         }
 

@@ -17,7 +17,7 @@
     "helmet": "8.1.0",
     "jsonwebtoken": "9.0.2",
     "multer": "2.0.0",
-    "sql.js": "1.10.2",
+    "@libsql/client": "0.15.0",
     "stripe": "20.2.0",
     "resend": "4.0.0"
   },

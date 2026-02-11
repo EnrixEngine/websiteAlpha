@@ -111,17 +111,38 @@ const authLimiter = rateLimit({
     legacyHeaders: false,
 });
 
-// Configuration Cloudinary (supporte CLOUDINARY_URL ou les 3 variables separees)
-if (process.env.CLOUDINARY_URL) {
-    // Le SDK Cloudinary parse automatiquement CLOUDINARY_URL
-    cloudinary.config();
-} else {
-    cloudinary.config({
-        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-        api_key: process.env.CLOUDINARY_API_KEY,
-        api_secret: process.env.CLOUDINARY_API_SECRET
-    });
-}
+// Configuration Cloudinary
+(() => {
+    let cloudName, apiKey, apiSecret;
+
+    if (process.env.CLOUDINARY_URL) {
+        // Parse explicite de CLOUDINARY_URL (format: cloudinary://API_KEY:API_SECRET@CLOUD_NAME)
+        const match = process.env.CLOUDINARY_URL.match(/cloudinary:\/\/(\d+):([^@]+)@(.+)/);
+        if (match) {
+            apiKey = match[1];
+            apiSecret = match[2];
+            cloudName = match[3];
+        } else {
+            logger.warn('CLOUDINARY_URL format invalide, attendu: cloudinary://API_KEY:API_SECRET@CLOUD_NAME');
+        }
+    }
+
+    // Les variables individuelles ecrasent CLOUDINARY_URL si presentes
+    cloudName = process.env.CLOUDINARY_CLOUD_NAME || cloudName;
+    apiKey = process.env.CLOUDINARY_API_KEY || apiKey;
+    apiSecret = process.env.CLOUDINARY_API_SECRET || apiSecret;
+
+    if (cloudName && apiKey && apiSecret) {
+        cloudinary.config({
+            cloud_name: cloudName,
+            api_key: apiKey,
+            api_secret: apiSecret
+        });
+        logger.info(`Cloudinary configure: cloud=${cloudName}, api_key=${apiKey}, secret=${apiSecret.substring(0, 4)}...${apiSecret.substring(apiSecret.length - 4)}`);
+    } else {
+        logger.warn('Cloudinary non configure - ajoutez CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET');
+    }
+})();
 
 // Configuration Stripe (optionnel - le serveur demarre meme sans cles)
 let stripe = null;
@@ -1345,6 +1366,19 @@ app.get('/api/payment/status/:sessionId', authenticateToken, async (req, res) =>
 });
 
 // ==================== API UPLOAD (Cloudinary) ====================
+
+// Diagnostic Cloudinary (admin)
+app.get('/api/admin/cloudinary-check', authenticateToken, isAdmin, async (req, res) => {
+    const cfg = cloudinary.config();
+    const configured = !!(cfg.cloud_name && cfg.api_key && cfg.api_secret);
+    res.json({
+        configured,
+        cloud_name: cfg.cloud_name || 'NON DEFINI',
+        api_key: cfg.api_key || 'NON DEFINI',
+        api_secret_preview: cfg.api_secret ? cfg.api_secret.substring(0, 4) + '...' + cfg.api_secret.substring(cfg.api_secret.length - 4) : 'NON DEFINI',
+        api_secret_length: cfg.api_secret ? cfg.api_secret.length : 0
+    });
+});
 
 app.post('/api/upload', authenticateToken, upload.single('image'), async (req, res) => {
     try {

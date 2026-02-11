@@ -111,12 +111,17 @@ const authLimiter = rateLimit({
     legacyHeaders: false,
 });
 
-// Configuration Cloudinary
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-});
+// Configuration Cloudinary (supporte CLOUDINARY_URL ou les 3 variables separees)
+if (process.env.CLOUDINARY_URL) {
+    // Le SDK Cloudinary parse automatiquement CLOUDINARY_URL
+    cloudinary.config();
+} else {
+    cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET
+    });
+}
 
 // Configuration Stripe (optionnel - le serveur demarre meme sans cles)
 let stripe = null;

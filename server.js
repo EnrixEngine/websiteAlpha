@@ -924,11 +924,12 @@ app.post('/api/products', authenticateToken, isAdmin, async (req, res) => {
         const result = await dbRun(`
             INSERT INTO products (nom, description, prix, prix_promo, image, images, tailles, categorie, type, stock)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [nom, description, prix, prix_promo, image, JSON.stringify(images || []), JSON.stringify(tailles || []), categorie, type || '', stock || 0]);
+        `, [nom || '', description || '', prix || 0, prix_promo || null, image || null, JSON.stringify(images || []), JSON.stringify(tailles || []), categorie || '', type || '', stock || 0]);
 
         res.json({ success: true, id: result.lastID });
     } catch (error) {
-        res.status(500).json({ error: 'Erreur lors de la creation' });
+        logger.error('Erreur creation produit:', error.message || error);
+        res.status(500).json({ error: 'Erreur lors de la creation: ' + (error.message || 'Erreur inconnue') });
     }
 });
 

@@ -5871,23 +5871,29 @@
                     images: uploadedImages
                 };
 
+                let apiResponse;
                 if (currentEditingProduct) {
                     // Modification via API
-                    await fetch(window.location.origin + '/api/products/' + currentEditingProduct.id, {
+                    apiResponse = await fetch(window.location.origin + '/api/products/' + currentEditingProduct.id, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
                         body: JSON.stringify(serverData)
                     });
-                    addLog('info', `Produit modifié: ${serverData.nom}`);
                 } else {
                     // Ajout via API
-                    await fetch(window.location.origin + '/api/products', {
+                    apiResponse = await fetch(window.location.origin + '/api/products', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
                         body: JSON.stringify(serverData)
                     });
-                    addLog('success', `Produit ajouté: ${serverData.nom}`);
                 }
+
+                const apiResult = await apiResponse.json();
+                if (!apiResponse.ok) {
+                    throw new Error(apiResult.error || 'Erreur serveur ' + apiResponse.status);
+                }
+
+                addLog(currentEditingProduct ? 'info' : 'success', `Produit ${currentEditingProduct ? 'modifié' : 'ajouté'}: ${serverData.nom}`);
 
                 // Recharger les produits depuis l'API
                 await loadProductsFromAPI();

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Cercle fond bordeaux/marron fonce -->
+  <circle cx="32" cy="32" r="31" fill="#3a1a1a"/>
+  <circle cx="32" cy="32" r="29" fill="#4a1e1e" stroke="#ddac0b" stroke-width="1.5"/>
+
+  <!-- Couronne doree -->
+  <g fill="#ddac0b" stroke="#c4a00a" stroke-width="0.5">
+    <polygon points="22,20 24,14 27,18 30,12 32,17 34,12 37,18 40,14 42,20"/>
+    <!-- Petits cercles sur les pointes -->
+    <circle cx="24" cy="13.5" r="1.2"/>
+    <circle cx="30" cy="11.5" r="1.2"/>
+    <circle cx="34" cy="11.5" r="1.2"/>
+    <circle cx="40" cy="13.5" r="1.2"/>
+    <!-- Bande base couronne -->
+    <rect x="22" y="19" width="20" height="3" rx="1"/>
+  </g>
+
+  <!-- Lettre B doree -->
+  <text x="32" y="49" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="30" fill="#ddac0b" stroke="#c4a00a" stroke-width="0.5">B</text>
+</svg>

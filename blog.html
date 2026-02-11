@@ -13363,9 +13363,14 @@
                     // Upload vers Cloudinary et sauvegarde sur le serveur
                     console.log('Upload vers Cloudinary en cours...');
 
-                    // Convertir base64 en fichier
-                    const base64Response = await fetch(imageData);
-                    const blob = await base64Response.blob();
+                    // Convertir base64 en blob (sans fetch, compatible CSP)
+                    const parts = imageData.split(',');
+                    const mime = parts[0].match(/:(.*?);/)[1];
+                    const byteStr = atob(parts[1]);
+                    const buf = new ArrayBuffer(byteStr.length);
+                    const arr = new Uint8Array(buf);
+                    for (let i = 0; i < byteStr.length; i++) { arr[i] = byteStr.charCodeAt(i); }
+                    const blob = new Blob([buf], { type: mime });
                     const file = new File([blob], 'carousel-' + index + '.jpg', { type: blob.type });
 
                     // Upload vers Cloudinary

@@ -1362,7 +1362,8 @@ app.post('/api/upload', authenticateToken, upload.single('image'), async (req, r
             filename: result.public_id
         });
     } catch (error) {
-        res.status(500).json({ error: 'Erreur lors de l\'upload' });
+        logger.error('Erreur upload Cloudinary:', error.message || error);
+        res.status(500).json({ error: 'Erreur upload: ' + (error.message || 'Cloudinary indisponible') });
     }
 });
 

@@ -409,6 +409,7 @@ async function runMigrations() {
     await addColumnIfMissing('products', 'stock', 'INTEGER DEFAULT 0');
     await addColumnIfMissing('users', 'auth_provider', 'TEXT DEFAULT "email"');
     await addColumnIfMissing('instagram_posts', 'video', 'TEXT DEFAULT ""');
+    await addColumnIfMissing('products', 'type', 'TEXT');
 }
 
 // Creer ou mettre a jour le compte admin
@@ -879,12 +880,12 @@ app.get('/api/products/:id', async (req, res) => {
 
 app.post('/api/products', authenticateToken, isAdmin, async (req, res) => {
     try {
-        const { nom, description, prix, prix_promo, image, images, tailles, categorie, stock } = req.body;
+        const { nom, description, prix, prix_promo, image, images, tailles, categorie, type, stock } = req.body;
 
         const result = await dbRun(`
-            INSERT INTO products (nom, description, prix, prix_promo, image, images, tailles, categorie, stock)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [nom, description, prix, prix_promo, image, JSON.stringify(images || []), JSON.stringify(tailles || []), categorie, stock || 0]);
+            INSERT INTO products (nom, description, prix, prix_promo, image, images, tailles, categorie, type, stock)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [nom, description, prix, prix_promo, image, JSON.stringify(images || []), JSON.stringify(tailles || []), categorie, type || '', stock || 0]);
 
         res.json({ success: true, id: result.lastID });
     } catch (error) {
@@ -894,12 +895,12 @@ app.post('/api/products', authenticateToken, isAdmin, async (req, res) => {
 
 app.put('/api/products/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
-        const { nom, description, prix, prix_promo, image, images, tailles, categorie, stock, actif } = req.body;
+        const { nom, description, prix, prix_promo, image, images, tailles, categorie, type, stock, actif } = req.body;
 
         await dbRun(`
-            UPDATE products SET nom = ?, description = ?, prix = ?, prix_promo = ?, image = ?, images = ?, tailles = ?, categorie = ?, stock = ?, actif = ?
+            UPDATE products SET nom = ?, description = ?, prix = ?, prix_promo = ?, image = ?, images = ?, tailles = ?, categorie = ?, type = ?, stock = ?, actif = ?
             WHERE id = ?
-        `, [nom, description, prix, prix_promo, image, JSON.stringify(images || []), JSON.stringify(tailles || []), categorie, stock, actif, req.params.id]);
+        `, [nom, description, prix, prix_promo, image, JSON.stringify(images || []), JSON.stringify(tailles || []), categorie, type || '', stock, actif, req.params.id]);
 
         res.json({ success: true });
     } catch (error) {

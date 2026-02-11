@@ -4746,8 +4746,64 @@
             icon: ""
         }];
 
-        // Charger les produits depuis localStorage ou utiliser les defaults
+        // Charger les produits (sera rempli par l'API au chargement)
         let products = JSON.parse(localStorage.getItem('alphamouv_products')) || defaultProducts;
+
+        // Convertir un produit serveur → format client
+        function serverToClient(p) {
+            return {
+                id: p.id,
+                name: p.nom || '',
+                category: p.categorie || '',
+                type: p.type || '',
+                price: p.prix || 0,
+                description: p.description || '',
+                sizes: p.tailles || [],
+                image: p.image || null,
+                images: p.images || [],
+                icon: '',
+                stock: p.stock || 0,
+                status: p.actif === 0 ? 'out-of-stock' : 'in-stock'
+            };
+        }
+
+        // Charger les produits depuis l'API serveur
+        async function loadProductsFromAPI() {
+            try {
+                const apiUrl = window.location.hostname === 'localhost'
+                    ? 'http://localhost:3000/api'
+                    : window.location.origin + '/api';
+                const response = await fetch(apiUrl + '/products');
+                const serverProducts = await response.json();
+                if (Array.isArray(serverProducts) && serverProducts.length > 0) {
+                    products = serverProducts.map(serverToClient);
+                    filteredProducts = [...products];
+                    localStorage.setItem('alphamouv_products', JSON.stringify(products));
+                    console.log('Produits charges depuis l\'API:', products.length);
+                }
+            } catch (error) {
+                console.error('Erreur chargement API produits:', error);
+            }
+        }
+
+        // Upload base64 image vers Cloudinary via l'API
+        async function uploadToCloudinary(base64Data) {
+            const blob = await fetch(base64Data).then(r => r.blob());
+            const formData = new FormData();
+            formData.append('image', blob, 'product.jpg');
+            const token = localStorage.getItem('alphamouv_token');
+            const apiUrl = window.location.hostname === 'localhost'
+                ? 'http://localhost:3000/api'
+                : window.location.origin + '/api';
+            const response = await fetch(apiUrl + '/upload', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                body: formData
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Erreur upload');
+            return data.url;
+        }
         let cart = JSON.parse(localStorage.getItem('alphamouv_cart')) || [];
         let filteredProducts = [...products];
         let currentEditingProduct = null;
@@ -6119,62 +6175,77 @@
         async function saveProduct(event) {
             event.preventDefault();
 
-            const formData = {
-                name: document.getElementById('productName').value.trim(),
-                price: parseFloat(document.getElementById('productPrice').value),
-                category: document.getElementById('productCategory').value,
-                type: document.getElementById('productType').value,
-                description: document.getElementById('productDescription').value.trim(),
-                stock: parseInt(document.getElementById('productStock').value) || 0,
-                status: document.getElementById('productStatus').value,
-                sizes: [...productSizes],
-                icon: document.getElementById('productIcon').value.trim() || '',
-                image: productImages.length > 0 ? productImages[0] : null,
-                images: [...productImages]
-            };
-
             if (productSizes.length === 0) {
                 await customAlert('Veuillez ajouter au moins une taille', 'Erreur', 'error');
                 return;
             }
 
-            if (currentEditingProduct) {
-                // Modification
-                const index = products.findIndex(p => p.id === currentEditingProduct.id);
-                if (index !== -1) {
-                    products[index] = {
-                        ...products[index],
-                        ...formData
-                    };
-                    addLog('info', `Produit modifié: ${formData.name}`);
+            const token = localStorage.getItem('alphamouv_token');
+            if (!token) {
+                await customAlert('Vous devez être connecté en tant qu\'admin pour modifier les produits.', 'Erreur', 'error');
+                return;
+            }
+
+            try {
+                // Upload des images base64 vers Cloudinary
+                const uploadedImages = [];
+                for (const img of productImages) {
+                    if (img && img.startsWith('data:')) {
+                        const url = await uploadToCloudinary(img);
+                        uploadedImages.push(url);
+                    } else if (img) {
+                        uploadedImages.push(img);
+                    }
                 }
-            } else {
-                // Ajout
-                const newProduct = {
-                    id: products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1,
-                    ...formData
+
+                // Preparer les donnees pour l'API serveur
+                const serverData = {
+                    nom: document.getElementById('productName').value.trim(),
+                    prix: parseFloat(document.getElementById('productPrice').value),
+                    categorie: document.getElementById('productCategory').value,
+                    type: document.getElementById('productType').value,
+                    description: document.getElementById('productDescription').value.trim(),
+                    stock: parseInt(document.getElementById('productStock').value) || 0,
+                    actif: document.getElementById('productStatus').value === 'out-of-stock' ? 0 : 1,
+                    tailles: [...productSizes],
+                    image: uploadedImages[0] || null,
+                    images: uploadedImages
                 };
-                products.push(newProduct);
-                addLog('success', `Produit ajouté: ${formData.name}`);
-            }
 
-            // Sauvegarder l'image dans IndexedDB si disponible
-            if (productImageData) {
-                const productId = currentEditingProduct ? currentEditingProduct.id : products[products.length - 1].id;
-                try {
-                    await saveProductImage(productId, productImageData);
-                } catch (error) {
-                    console.error('Erreur sauvegarde image:', error);
+                const apiUrl = window.location.hostname === 'localhost'
+                    ? 'http://localhost:3000/api'
+                    : window.location.origin + '/api';
+
+                if (currentEditingProduct) {
+                    // Modification via API
+                    await fetch(apiUrl + '/products/' + currentEditingProduct.id, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify(serverData)
+                    });
+                    addLog('info', `Produit modifié: ${serverData.nom}`);
+                } else {
+                    // Ajout via API
+                    await fetch(apiUrl + '/products', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify(serverData)
+                    });
+                    addLog('success', `Produit ajouté: ${serverData.nom}`);
                 }
-            }
 
-            saveProducts();
-            filteredProducts = [...products];
-            renderProducts();
-            renderProductsListAdmin();
-            updateAdminStats();
-            closeProductForm();
-            await customAlert('Produit enregistré avec succès !', 'Succès', 'success');
+                // Recharger les produits depuis l'API
+                await loadProductsFromAPI();
+                filteredProducts = [...products];
+                renderProducts();
+                renderProductsListAdmin();
+                updateAdminStats();
+                closeProductForm();
+                await customAlert('Produit enregistré avec succès !', 'Succès', 'success');
+            } catch (error) {
+                console.error('Erreur sauvegarde produit:', error);
+                await customAlert('Erreur: ' + error.message, 'Erreur', 'error');
+            }
         }
 
         // Éditer un produit
@@ -6225,22 +6296,29 @@
 
             if (!confirmed) return;
 
-            products = products.filter(p => p.id !== productId);
-
-            // Supprimer l'image de IndexedDB
             try {
-                await deleteProductImage(productId);
-            } catch (error) {
-                console.error('Erreur suppression image:', error);
-            }
+                const token = localStorage.getItem('alphamouv_token');
+                const apiUrl = window.location.hostname === 'localhost'
+                    ? 'http://localhost:3000/api'
+                    : window.location.origin + '/api';
 
-            saveProducts();
-            filteredProducts = [...products];
-            renderProducts();
-            renderProductsListAdmin();
-            updateAdminStats();
-            addLog('warning', `Produit supprimé: ${product.name}`);
-            await customAlert('Produit supprimé avec succès !', 'Suppression réussie', 'success');
+                await fetch(apiUrl + '/products/' + productId, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                // Recharger les produits depuis l'API
+                await loadProductsFromAPI();
+                filteredProducts = [...products];
+                renderProducts();
+                renderProductsListAdmin();
+                updateAdminStats();
+                addLog('warning', `Produit supprimé: ${product.name}`);
+                await customAlert('Produit supprimé avec succès !', 'Suppression réussie', 'success');
+            } catch (error) {
+                console.error('Erreur suppression:', error);
+                await customAlert('Erreur: ' + error.message, 'Erreur', 'error');
+            }
         }
 
         // Afficher la liste des produits dans le panneau admin
@@ -6783,14 +6861,16 @@
         // Init
         window.addEventListener('DOMContentLoaded', async function() {
             await initAdminSystem();
+
+            // Charger les produits depuis l'API serveur (Turso)
+            await loadProductsFromAPI();
+            filteredProducts = [...products];
+
+            // Fallback: charger les images IndexedDB pour les anciens produits locaux
             await loadSavedProductImages();
+
             renderProducts();
             checkAdminAccess();
-
-            // Charger les produits si premiers lancement
-            if (!localStorage.getItem('alphamouv_products')) {
-                saveProducts();
-            }
         });
 
         // ============================================
@@ -8086,6 +8166,7 @@
             if (e.target === this) closeWishlistModal();
         });
     </script>
+    <script src="api.js"></script>
 </body>
 
 </html>

@@ -4690,9 +4690,22 @@
             }
         }
 
+        // Convertir base64 en Blob (sans fetch, compatible CSP)
+        function base64ToBlob(base64Str) {
+            const parts = base64Str.split(',');
+            const mime = parts[0].match(/:(.*?);/)[1];
+            const byteStr = atob(parts[1]);
+            const buf = new ArrayBuffer(byteStr.length);
+            const arr = new Uint8Array(buf);
+            for (let i = 0; i < byteStr.length; i++) {
+                arr[i] = byteStr.charCodeAt(i);
+            }
+            return new Blob([buf], { type: mime });
+        }
+
         // Upload base64 image vers Cloudinary via l'API serveur
         async function uploadToCloudinary(base64Data) {
-            const blob = await fetch(base64Data).then(r => r.blob());
+            const blob = base64ToBlob(base64Data);
             const formData = new FormData();
             formData.append('image', blob, 'product.jpg');
             const token = localStorage.getItem('alphamouv_token');

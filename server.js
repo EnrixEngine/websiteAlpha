@@ -30,10 +30,23 @@ const logger = {
 const helmet = require('helmet');
 
 // ==================== CHIFFREMENT DES DONNEES (AES-256-GCM) ====================
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY
-    || crypto.createHash('sha256')
+let ENCRYPTION_KEY;
+if (process.env.ENCRYPTION_KEY) {
+    // Cle fournie en env var (doit etre une chaine hex de 64 caracteres = 32 bytes)
+    const hexKey = process.env.ENCRYPTION_KEY;
+    ENCRYPTION_KEY = Buffer.from(hexKey, 'hex');
+    if (ENCRYPTION_KEY.length !== 32) {
+        logger.warn('ENCRYPTION_KEY invalide (' + ENCRYPTION_KEY.length + ' bytes au lieu de 32). Utilisation de la cle derivee.');
+        ENCRYPTION_KEY = crypto.createHash('sha256')
+            .update(process.env.JWT_SECRET || 'alphamouv_default_key_2024')
+            .digest();
+    }
+} else {
+    // Pas de cle fournie → deriver depuis JWT_SECRET
+    ENCRYPTION_KEY = crypto.createHash('sha256')
         .update(process.env.JWT_SECRET || 'alphamouv_default_key_2024')
         .digest();
+}
 const GCM_IV_LENGTH = 12;
 
 // Chiffrer une donnee sensible (AES-256-GCM - chiffrement authentifie)

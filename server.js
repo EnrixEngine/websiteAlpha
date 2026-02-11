@@ -886,6 +886,12 @@ app.put('/api/auth/password', authenticateToken, async (req, res) => {
     }
 });
 
+// ==================== HEALTH CHECK (keep-alive) ====================
+
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', uptime: Math.floor(process.uptime()) });
+});
+
 // ==================== API PRODUITS ====================
 
 app.get('/api/products', async (req, res) => {

@@ -4728,7 +4728,10 @@
 
         // Initialiser les produits
         function initProducts() {
-            renderProducts();
+            // Ne pas ecraser le grid si les produits ne sont pas encore charges
+            if (products.length > 0) {
+                renderProducts();
+            }
             updateCartUI();
             updateUserLinks();
         }
@@ -4755,8 +4758,8 @@
                     </button>
                     ` : ''}
                     ${product.image
-                        ? `<img src="${product.image}" alt="${product.name}" class="product-image">`
-                        : `<div class="product-image-placeholder">${product.icon}</div>`
+                        ? `<img src="${product.image}" alt="${product.name}" class="product-image" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="product-image-placeholder" style="display:none">${product.name.charAt(0)}</div>`
+                        : `<div class="product-image-placeholder">${product.name.charAt(0)}</div>`
                     }
                     <div class="product-name-overlay">
                         ${product.name}
@@ -6489,14 +6492,29 @@
 
         // Init
         window.addEventListener('DOMContentLoaded', async function() {
-            await initAdminSystem();
+            try {
+                await initAdminSystem();
+            } catch(e) { console.error('initAdminSystem error:', e); }
 
-            // Charger les produits depuis l'API serveur (Turso + Cloudinary)
-            await loadProductsFromAPI();
-            filteredProducts = [...products];
+            // Afficher un message de chargement
+            const grid = document.getElementById('productsGrid');
+            if (grid && !grid.children.length) {
+                grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:rgba(255,255,255,0.5);">Chargement des produits...</div>';
+            }
 
-            renderProducts();
-            checkAdminAccess();
+            try {
+                // Charger les produits depuis l'API serveur (Turso + Cloudinary)
+                await loadProductsFromAPI();
+                filteredProducts = [...products];
+                renderProducts();
+            } catch(e) {
+                console.error('Erreur chargement produits:', e);
+                if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:rgba(255,255,255,0.5);">Erreur de chargement des produits</div>';
+            }
+
+            try {
+                checkAdminAccess();
+            } catch(e) { console.error('checkAdminAccess error:', e); }
         });
 
         // ============================================

@@ -164,95 +164,228 @@ if (process.env.RESEND_API_KEY) {
     logger.info('Resend non configure - ajoutez RESEND_API_KEY pour activer les emails');
 }
 
-// Fonction d'envoi d'email de confirmation de commande
-async function sendOrderConfirmationEmail(order, customerEmail, customerName) {
-    if (!resend) {
-        logger.info('Email non envoye - Resend non configure');
-        return false;
-    }
+// Infos entreprise (à remplir dans les variables d'environnement)
+const BUSINESS_NAME    = process.env.BUSINESS_NAME    || 'B.A.B - Artiste Créateur';
+const BUSINESS_SIRET   = process.env.BUSINESS_SIRET   || 'SIRET : À COMPLÉTER';
+const BUSINESS_ADDRESS = process.env.BUSINESS_ADDRESS || 'Adresse : À COMPLÉTER';
+const BUSINESS_EMAIL   = process.env.BUSINESS_EMAIL   || '';
+const FROM_EMAIL       = process.env.FROM_EMAIL        || 'onboarding@resend.dev';
 
+// Numero de facture formaté
+function invoiceNumber(orderId) {
+    return `FAC-${new Date().getFullYear()}-${String(orderId).padStart(4, '0')}`;
+}
+
+// Styles communs pour les emails facture
+function invoiceStyles() {
+    return `
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 620px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #ddac0b, #b8900a); padding: 28px 30px; }
+        .header h1 { color: #000; margin: 0; font-size: 26px; letter-spacing: 2px; }
+        .header p { color: #000; margin: 4px 0 0; font-size: 13px; }
+        .invoice-meta { display: flex; justify-content: space-between; padding: 20px 0; border-bottom: 2px solid #ddac0b; margin-bottom: 20px; }
+        .meta-block { font-size: 13px; }
+        .meta-block strong { display: block; font-size: 15px; margin-bottom: 4px; }
+        .badge { display: inline-block; background: #ddac0b; color: #000; padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 13px; }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        th { background: #222; color: #fff; padding: 10px 12px; text-align: left; font-size: 13px; }
+        td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 13px; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .total-row td { font-weight: bold; font-size: 15px; background: #f5f5f5; }
+        .discount-row td { color: #e53e3e; font-size: 13px; }
+        .footer { text-align: center; padding: 20px; color: #888; font-size: 11px; border-top: 1px solid #eee; margin-top: 24px; }
+        .note { background: #fffbea; border-left: 4px solid #ddac0b; padding: 12px 16px; margin: 16px 0; font-size: 13px; }
+    `;
+}
+
+// Tableau des articles commun
+function itemsTable(items, discountAmount, promoCode, total) {
+    const rows = items.map(item => `
+        <tr>
+            <td>${item.name || item.nom || 'Produit'}</td>
+            <td class="text-center">${item.quantity || 1}</td>
+            <td class="text-right">${Number(item.price).toFixed(2)} €</td>
+            <td class="text-right">${(Number(item.price) * (item.quantity || 1)).toFixed(2)} €</td>
+        </tr>`).join('');
+
+    const discountRow = (discountAmount > 0) ? `
+        <tr class="discount-row">
+            <td colspan="3">Code promo (${promoCode}) — réduction</td>
+            <td class="text-right">-${Number(discountAmount).toFixed(2)} €</td>
+        </tr>` : '';
+
+    return `
+        <table>
+            <thead>
+                <tr>
+                    <th>Produit</th>
+                    <th class="text-center">Qté</th>
+                    <th class="text-right">Prix unit.</th>
+                    <th class="text-right">Sous-total</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows}
+                ${discountRow}
+                <tr class="total-row">
+                    <td colspan="3">Total TTC</td>
+                    <td class="text-right">${Number(total).toFixed(2)} €</td>
+                </tr>
+            </tbody>
+        </table>`;
+}
+
+// ── Facture client ──────────────────────────────────────────────────────────
+async function sendClientInvoiceEmail(order, customerEmail, customerName) {
+    if (!resend) { logger.info('Resend non configure - facture client non envoyee'); return false; }
     try {
         const items = JSON.parse(order.items || '[]');
-        const itemsList = items.map(item =>
-            `<tr>
-                <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity || 1}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.price.toFixed(2)} €</td>
-            </tr>`
-        ).join('');
+        const invoiceNum = invoiceNumber(order.id);
+        const date = new Date().toLocaleDateString('fr-FR');
 
-        const emailHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: linear-gradient(135deg, #ddac0b, #b8900a); padding: 30px; text-align: center; }
-                .header h1 { color: #000; margin: 0; font-size: 28px; }
-                .content { padding: 30px; background: #f9f9f9; }
-                .order-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-                .order-table th { background: #333; color: #fff; padding: 12px; text-align: left; }
-                .total { font-size: 20px; font-weight: bold; color: #ddac0b; }
-                .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>AlphaMouv</h1>
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${invoiceStyles()}</style></head>
+        <body><div class="container">
+            <div class="header">
+                <h1>AlphaMouv</h1>
+                <p>${BUSINESS_NAME}</p>
+            </div>
+            <div style="padding: 20px 0;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+                    <div class="meta-block">
+                        <strong>Facture client</strong>
+                        <span class="badge">${invoiceNum}</span><br>
+                        <span style="font-size:12px; color:#666;">Date : ${date}</span>
+                    </div>
+                    <div class="meta-block" style="text-align:right;">
+                        <strong>Destinataire</strong>
+                        ${customerName}<br>${customerEmail}
+                    </div>
                 </div>
-                <div class="content">
-                    <h2>Merci pour votre commande !</h2>
-                    <p>Bonjour ${customerName || 'cher client'},</p>
-                    <p>Nous avons bien recu votre commande et nous vous en remercions.</p>
-
-                    <h3>Recapitulatif de votre commande #${order.id}</h3>
-                    <table class="order-table">
-                        <thead>
-                            <tr>
-                                <th>Produit</th>
-                                <th style="text-align: center;">Quantite</th>
-                                <th style="text-align: right;">Prix</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${itemsList}
-                        </tbody>
-                    </table>
-
-                    <p class="total">Total: ${order.total.toFixed(2)} €</p>
-
-                    <p>Vous recevrez un email de suivi des que votre commande sera expediee.</p>
-                    <p>Si vous avez des questions, n'hesitez pas a nous contacter.</p>
-
-                    <p>A bientot !<br>L'equipe AlphaMouv</p>
-                </div>
-                <div class="footer">
-                    <p>© ${new Date().getFullYear()} AlphaMouv - Tous droits reserves</p>
+                <br>
+                <h3 style="margin:0 0 8px;">Détail de votre commande</h3>
+                ${itemsTable(items, order.discount_amount, order.promo_code, order.total)}
+                <div class="note">
+                    Merci pour votre achat ! Vous recevrez un email de suivi dès l'expédition de votre commande.<br>
+                    Pour toute question : <a href="mailto:${FROM_EMAIL}">${FROM_EMAIL}</a>
                 </div>
             </div>
-        </body>
-        </html>
-        `;
+            <div class="footer">
+                © ${new Date().getFullYear()} ${BUSINESS_NAME} — ${BUSINESS_SIRET}<br>${BUSINESS_ADDRESS}
+            </div>
+        </div></body></html>`;
 
-        const { data, error } = await resend.emails.send({
-            from: 'AlphaMouv <onboarding@resend.dev>',
+        const { error } = await resend.emails.send({
+            from: `AlphaMouv <${FROM_EMAIL}>`,
             to: [customerEmail],
-            subject: `Confirmation de commande #${order.id} - AlphaMouv`,
-            html: emailHtml,
+            subject: `Votre facture ${invoiceNum} — AlphaMouv`,
+            html,
         });
-
-        if (error) {
-            logger.error('Erreur envoi email:', error);
-            return false;
-        }
-
-        logger.info('Email de confirmation envoye:', data?.id);
+        if (error) { logger.error('Erreur facture client:', error); return false; }
+        logger.info('Facture client envoyee:', invoiceNum);
         return true;
-    } catch (error) {
-        logger.error('Erreur envoi email:', error);
+    } catch (err) {
+        logger.error('Erreur facture client:', err);
+        return false;
+    }
+}
+
+// ── Facture entreprise ──────────────────────────────────────────────────────
+async function sendBusinessInvoiceEmail(order, customerEmail, customerName) {
+    if (!resend) { logger.info('Resend non configure - facture entreprise non envoyee'); return false; }
+    if (!BUSINESS_EMAIL) { logger.info('BUSINESS_EMAIL non configure - facture entreprise non envoyee'); return false; }
+    try {
+        const items = JSON.parse(order.items || '[]');
+        const invoiceNum = invoiceNumber(order.id);
+        const date = new Date().toLocaleDateString('fr-FR');
+
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${invoiceStyles()}</style></head>
+        <body><div class="container">
+            <div class="header">
+                <h1>AlphaMouv</h1>
+                <p>${BUSINESS_NAME} — Copie entreprise</p>
+            </div>
+            <div style="padding: 20px 0;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+                    <div class="meta-block">
+                        <strong>Facture entreprise</strong>
+                        <span class="badge">${invoiceNum}</span><br>
+                        <span style="font-size:12px; color:#666;">Date : ${date}</span><br>
+                        <span style="font-size:12px; color:#666;">Commande #${order.id}</span>
+                    </div>
+                    <div class="meta-block" style="text-align:right;">
+                        <strong>Vendeur</strong>
+                        ${BUSINESS_NAME}<br>
+                        ${BUSINESS_SIRET}<br>
+                        ${BUSINESS_ADDRESS}
+                    </div>
+                </div>
+                <br>
+                <div class="meta-block" style="margin-bottom:12px;">
+                    <strong>Client</strong>
+                    ${customerName} — ${customerEmail}
+                </div>
+                ${itemsTable(items, order.discount_amount, order.promo_code, order.total)}
+                ${order.promo_code ? `<div class="note">Code promo utilisé : <strong>${order.promo_code}</strong> — réduction de ${Number(order.discount_amount).toFixed(2)} €</div>` : ''}
+            </div>
+            <div class="footer">
+                Document à conserver pour votre comptabilité.<br>
+                © ${new Date().getFullYear()} ${BUSINESS_NAME} — ${BUSINESS_SIRET}
+            </div>
+        </div></body></html>`;
+
+        const { error } = await resend.emails.send({
+            from: `AlphaMouv <${FROM_EMAIL}>`,
+            to: [BUSINESS_EMAIL],
+            subject: `[Entreprise] Facture ${invoiceNum} — Commande de ${customerName}`,
+            html,
+        });
+        if (error) { logger.error('Erreur facture entreprise:', error); return false; }
+        logger.info('Facture entreprise envoyee:', invoiceNum);
+        return true;
+    } catch (err) {
+        logger.error('Erreur facture entreprise:', err);
+        return false;
+    }
+}
+
+// ── Email de bienvenue newsletter ───────────────────────────────────────────
+async function sendNewsletterWelcomeEmail(email) {
+    if (!resend) { logger.info('Resend non configure - welcome newsletter non envoye'); return false; }
+    try {
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${invoiceStyles()}</style></head>
+        <body><div class="container">
+            <div class="header">
+                <h1>AlphaMouv</h1>
+                <p>${BUSINESS_NAME}</p>
+            </div>
+            <div style="padding: 30px 0; text-align:center;">
+                <h2 style="color:#ddac0b;">Bienvenue dans la newsletter !</h2>
+                <p style="font-size:15px; color:#444;">
+                    Merci de rejoindre la communauté AlphaMouv.<br>
+                    Vous serez parmi les premiers informés des nouvelles créations, expositions et offres exclusives de ${BUSINESS_NAME}.
+                </p>
+                <div class="note" style="text-align:left;">
+                    Pour vous désinscrire à tout moment, répondez à cet email avec l'objet <strong>"Désinscription"</strong>.
+                </div>
+            </div>
+            <div class="footer">
+                © ${new Date().getFullYear()} ${BUSINESS_NAME} — ${BUSINESS_ADDRESS}
+            </div>
+        </div></body></html>`;
+
+        const { error } = await resend.emails.send({
+            from: `AlphaMouv <${FROM_EMAIL}>`,
+            to: [email],
+            subject: `Bienvenue dans la newsletter AlphaMouv !`,
+            html,
+        });
+        if (error) { logger.error('Erreur welcome newsletter:', error); return false; }
+        logger.info('Welcome newsletter envoye a:', email);
+        return true;
+    } catch (err) {
+        logger.error('Erreur welcome newsletter:', err);
         return false;
     }
 }
@@ -600,7 +733,8 @@ async function processCompletedPayment(order) {
         const name = user.prenom
             ? `${user.prenom} ${user.nom || ''}`.trim()
             : email;
-        await sendOrderConfirmationEmail({ ...order, status: 'paid' }, email, name);
+        await sendClientInvoiceEmail({ ...order, status: 'paid' }, email, name);
+        await sendBusinessInvoiceEmail({ ...order, status: 'paid' }, email, name);
     }
 }
 
@@ -1057,6 +1191,7 @@ app.post('/api/newsletter', async (req, res) => {
         // Chiffrer l'email avant stockage
         const encryptedEmail = encryptData(email);
         await dbRun('INSERT INTO newsletter (email) VALUES (?)', [encryptedEmail]);
+        sendNewsletterWelcomeEmail(email).catch(err => logger.error('Erreur welcome newsletter:', err));
         res.json({ success: true, message: 'Inscription reussie a la newsletter' });
     } catch (error) {
         res.status(500).json({ error: 'Erreur lors de l\'inscription' });

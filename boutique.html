@@ -4673,12 +4673,17 @@
 
         // Convertir un produit serveur → format client
         function serverToClient(p) {
+            const prix = parseFloat(p.prix) || 0;
+            const prix_promo = p.prix_promo != null ? parseFloat(p.prix_promo) : null;
             return {
                 id: p.id,
                 name: p.nom || '',
+                nom: p.nom || '',
                 category: p.categorie || '',
                 type: p.type || '',
-                price: p.prix || 0,
+                price: prix_promo !== null ? prix_promo : prix,
+                prix: prix,
+                prix_promo: prix_promo,
                 description: p.description || '',
                 sizes: p.tailles || [],
                 image: p.image || null,

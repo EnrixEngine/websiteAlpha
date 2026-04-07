@@ -1283,24 +1283,23 @@ app.post('/api/payment/create-checkout-session', authenticateToken, async (req, 
             };
         });
 
-        // Ajouter la reduction comme line item negatif si applicable
+        // Creer un coupon Stripe si code promo applique
+        let discounts = [];
         if (discountAmount > 0) {
-            lineItems.push({
-                price_data: {
-                    currency: 'eur',
-                    product_data: {
-                        name: `Reduction (${promoCodeUsed})`,
-                    },
-                    unit_amount: -Math.round(discountAmount * 100),
-                },
-                quantity: 1,
+            const coupon = await stripe.coupons.create({
+                amount_off: Math.round(discountAmount * 100),
+                currency: 'eur',
+                name: `Réduction ${promoCodeUsed}`,
+                duration: 'once',
             });
+            discounts = [{ coupon: coupon.id }];
         }
 
         // Creer la session Stripe Checkout
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items: lineItems,
+            ...(discounts.length > 0 && { discounts }),
             mode: 'payment',
             success_url: successUrl || `${req.headers.origin}/boutique.html?payment=success`,
             cancel_url: cancelUrl || `${req.headers.origin}/boutique.html?payment=cancel`,

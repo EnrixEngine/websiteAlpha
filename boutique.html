@@ -4881,7 +4881,7 @@
             const cartFooter = document.getElementById('cartFooter');
 
             const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-            const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const totalPrice = cart.reduce((sum, item) => sum + ((item.prix_promo != null ? item.prix_promo : item.prix) * item.quantity), 0);
 
             cartCount.textContent = totalItems;
 
@@ -4899,25 +4899,25 @@
                 cartIcon.classList.add('has-items');
                 cartItems.innerHTML = cart.map(item => `
                     <div class="cart-item">
-                        ${item.image 
-                            ? `<img src="${item.image}" alt="${item.name}" class="cart-item-image">`
+                        ${item.image
+                            ? `<img src="${item.image}" alt="${item.nom}" class="cart-item-image">`
                             : `<div class="cart-item-placeholder">${item.icon}</div>`
                         }
                         <div class="cart-item-info">
-                            <div class="cart-item-name">${item.name}</div>
+                            <div class="cart-item-name">${item.nom}</div>
                             <div class="cart-item-details">Taille: ${item.selectedSize}</div>
                             <div class="cart-item-quantity">
                                 <button class="qty-btn" onclick="updateQuantity(${item.id}, -1)">-</button>
                                 <span>${item.quantity}</span>
                                 <button class="qty-btn" onclick="updateQuantity(${item.id}, 1)">+</button>
                             </div>
-                            <div class="cart-item-price">${item.price * item.quantity}€</div>
+                            <div class="cart-item-price">${((item.prix_promo != null ? item.prix_promo : item.prix) * item.quantity).toFixed(2)}€</div>
                             <button class="remove-item" onclick="removeFromCart(${item.id})">Retirer</button>
                         </div>
                     </div>
                 `).join('');
                 cartFooter.style.display = 'block';
-                cartTotal.textContent = `${totalPrice}€`;
+                cartTotal.textContent = totalPrice.toFixed(2) + '€';
             }
         }
 
@@ -5332,9 +5332,9 @@
                 // Preparer les items pour Stripe
                 const items = cart.map(item => ({
                     id: item.id,
-                    name: item.name,
+                    name: item.nom,
                     description: item.description || '',
-                    price: item.prix_promo || item.prix || item.price,
+                    price: item.prix_promo != null ? item.prix_promo : item.prix,
                     quantity: item.quantity,
                     image: item.image
                 }));

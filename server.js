@@ -166,10 +166,20 @@ if (process.env.RESEND_API_KEY) {
 
 // Infos entreprise (à remplir dans les variables d'environnement)
 const BUSINESS_NAME    = process.env.BUSINESS_NAME    || 'B.A.B - Artiste Créateur';
-const BUSINESS_SIRET   = process.env.BUSINESS_SIRET   || 'SIRET : À COMPLÉTER';
-const BUSINESS_ADDRESS = process.env.BUSINESS_ADDRESS || 'Adresse : À COMPLÉTER';
+const BUSINESS_SIRET   = process.env.BUSINESS_SIRET   || '';
+const BUSINESS_ADDRESS = process.env.BUSINESS_ADDRESS || '';
 const BUSINESS_EMAIL   = process.env.BUSINESS_EMAIL   || '';
 const FROM_EMAIL       = process.env.FROM_EMAIL        || 'onboarding@resend.dev';
+
+// ==================== FRAIS DE LIVRAISON ====================
+// Configurable via variables d'environnement sur Render
+const SHIPPING_FR                = parseFloat(process.env.SHIPPING_FR || '8');    // France HT
+const SHIPPING_EU                = parseFloat(process.env.SHIPPING_EU || '15');   // Europe HT
+const FREE_SHIPPING_THRESHOLD    = parseFloat(process.env.FREE_SHIPPING_THRESHOLD || '100'); // Livraison offerte au-dessus de ce montant HT
+
+// ==================== TVA ====================
+// 20% sur vêtements — à mettre à jour sur Render si le taux change
+const TVA_RATE = parseFloat(process.env.TVA_RATE || '0.20');
 
 // Numero de facture formaté
 function invoiceNumber(orderId) {
@@ -200,8 +210,17 @@ function invoiceStyles() {
     `;
 }
 
-// Tableau des articles commun
-function itemsTable(items, discountAmount, promoCode, total) {
+// Tableau des articles commun — toutes les valeurs sont en HT
+function itemsTable(items, discountAmount, promoCode, total, shippingAmount) {
+    const subtotalHT = items.reduce((sum, item) => sum + (Number(item.price) * (item.quantity || 1)), 0);
+    const shippingHT = Number(shippingAmount) || 0;
+    const discountHT = Number(discountAmount) || 0;
+    // total (order.total) = subtotalHT - discountHT (stocké sans livraison)
+    const totalHT    = Number(total) + shippingHT;
+    const tvaAmount  = totalHT * TVA_RATE;
+    const totalTTC   = totalHT * (1 + TVA_RATE);
+    const tvaLabel   = `TVA ${Math.round(TVA_RATE * 100)}%`;
+
     const rows = items.map(item => `
         <tr>
             <td>${item.name || item.nom || 'Produit'}</td>
@@ -210,11 +229,17 @@ function itemsTable(items, discountAmount, promoCode, total) {
             <td class="text-right">${(Number(item.price) * (item.quantity || 1)).toFixed(2)} €</td>
         </tr>`).join('');
 
-    const discountRow = (discountAmount > 0) ? `
+    const discountRow = discountHT > 0 ? `
         <tr class="discount-row">
             <td colspan="3">Code promo (${promoCode}) — réduction</td>
-            <td class="text-right">-${Number(discountAmount).toFixed(2)} €</td>
+            <td class="text-right">-${discountHT.toFixed(2)} €</td>
         </tr>` : '';
+
+    const shippingRow = `
+        <tr>
+            <td colspan="3" style="color:#555;">Frais de livraison HT</td>
+            <td class="text-right" style="color:#555;">${shippingHT > 0 ? shippingHT.toFixed(2) + ' €' : 'Offerts'}</td>
+        </tr>`;
 
     return `
         <table>
@@ -222,16 +247,29 @@ function itemsTable(items, discountAmount, promoCode, total) {
                 <tr>
                     <th>Produit</th>
                     <th class="text-center">Qté</th>
-                    <th class="text-right">Prix unit.</th>
-                    <th class="text-right">Sous-total</th>
+                    <th class="text-right">Prix unit. HT</th>
+                    <th class="text-right">Sous-total HT</th>
                 </tr>
             </thead>
             <tbody>
                 ${rows}
+                <tr style="border-top:1px solid #ddd;">
+                    <td colspan="3" style="color:#555;">Sous-total HT articles</td>
+                    <td class="text-right" style="color:#555;">${subtotalHT.toFixed(2)} €</td>
+                </tr>
+                ${shippingRow}
                 ${discountRow}
+                <tr style="border-top:2px solid #ddd;">
+                    <td colspan="3" style="color:#333; font-weight:600;">Total HT</td>
+                    <td class="text-right" style="font-weight:600;">${totalHT.toFixed(2)} €</td>
+                </tr>
+                <tr>
+                    <td colspan="3" style="color:#555;">${tvaLabel}</td>
+                    <td class="text-right" style="color:#555;">${tvaAmount.toFixed(2)} €</td>
+                </tr>
                 <tr class="total-row">
                     <td colspan="3">Total TTC</td>
-                    <td class="text-right">${Number(total).toFixed(2)} €</td>
+                    <td class="text-right">${totalTTC.toFixed(2)} €</td>
                 </tr>
             </tbody>
         </table>`;
@@ -265,7 +303,7 @@ async function sendClientInvoiceEmail(order, customerEmail, customerName) {
                 </div>
                 <br>
                 <h3 style="margin:0 0 8px;">Détail de votre commande</h3>
-                ${itemsTable(items, order.discount_amount, order.promo_code, order.total)}
+                ${itemsTable(items, order.discount_amount, order.promo_code, order.total, order.shipping_amount)}
                 <div class="note">
                     Merci pour votre achat ! Vous recevrez un email de suivi dès l'expédition de votre commande.<br>
                     Pour toute question : <a href="mailto:${FROM_EMAIL}">${FROM_EMAIL}</a>
@@ -324,9 +362,24 @@ async function sendBusinessInvoiceEmail(order, customerEmail, customerName) {
                 <br>
                 <div class="meta-block" style="margin-bottom:12px;">
                     <strong>Client</strong>
-                    ${customerName} — ${customerEmail}
+                    ${customerName} — ${customerEmail}<br>
+                    ${(() => {
+                        try {
+                            const addr = order.shipping_address ? JSON.parse(order.shipping_address) : null;
+                            if (!addr) return '';
+                            const a = addr.address || {};
+                            const lines = [
+                                addr.name,
+                                a.line1,
+                                a.line2,
+                                `${a.postal_code || ''} ${a.city || ''}`.trim(),
+                                a.country,
+                            ].filter(Boolean);
+                            return '<span style="font-size:12px; color:#555;">Livraison : ' + lines.join(', ') + '</span>';
+                        } catch { return ''; }
+                    })()}
                 </div>
-                ${itemsTable(items, order.discount_amount, order.promo_code, order.total)}
+                ${itemsTable(items, order.discount_amount, order.promo_code, order.total, order.shipping_amount)}
                 ${order.promo_code ? `<div class="note">Code promo utilisé : <strong>${order.promo_code}</strong> — réduction de ${Number(order.discount_amount).toFixed(2)} €</div>` : ''}
             </div>
             <div class="footer">
@@ -346,6 +399,46 @@ async function sendBusinessInvoiceEmail(order, customerEmail, customerName) {
         return true;
     } catch (err) {
         logger.error('Erreur facture entreprise:', err);
+        return false;
+    }
+}
+
+// ── Email de bienvenue inscription ──────────────────────────────────────────
+async function sendWelcomeEmail(email, prenom) {
+    if (!resend) { logger.info('Resend non configure - welcome inscription non envoye'); return false; }
+    try {
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${invoiceStyles()}</style></head>
+        <body><div class="container">
+            <div class="header">
+                <h1>B.A.B</h1>
+                <p>${BUSINESS_NAME}</p>
+            </div>
+            <div style="padding: 30px 0; text-align:center;">
+                <h2 style="color:#ddac0b;">Bienvenue, ${prenom} !</h2>
+                <p style="font-size:15px; color:#444;">
+                    Votre compte a bien été créé sur la boutique de ${BUSINESS_NAME}.<br>
+                    Vous pouvez dès maintenant découvrir les créations originales et passer commande.
+                </p>
+                <div class="note" style="text-align:left;">
+                    Si vous n'êtes pas à l'origine de cette inscription, ignorez cet email.
+                </div>
+            </div>
+            <div class="footer">
+                © ${new Date().getFullYear()} ${BUSINESS_NAME} — ${BUSINESS_ADDRESS}
+            </div>
+        </div></body></html>`;
+
+        const { error } = await resend.emails.send({
+            from: `B.A.B <${FROM_EMAIL}>`,
+            to: [email],
+            subject: `Bienvenue sur la boutique B.A.B !`,
+            html,
+        });
+        if (error) { logger.error('Erreur welcome inscription:', error); return false; }
+        logger.info('Welcome inscription envoye a:', email);
+        return true;
+    } catch (err) {
+        logger.error('Erreur welcome inscription:', err);
         return false;
     }
 }
@@ -582,6 +675,7 @@ async function runMigrations() {
     await addColumnIfMissing('users', 'auth_provider', 'TEXT DEFAULT "email"');
     await addColumnIfMissing('instagram_posts', 'video', 'TEXT DEFAULT ""');
     await addColumnIfMissing('products', 'type', 'TEXT');
+    await addColumnIfMissing('orders', 'shipping_amount', 'REAL DEFAULT 0');
 }
 
 // Creer ou mettre a jour le compte admin
@@ -708,11 +802,14 @@ async function decrementOrderStock(orderItems) {
 }
 
 // Traiter une commande apres paiement confirme
-async function processCompletedPayment(order) {
+async function processCompletedPayment(order, shippingAmount = 0, shippingDetails = null) {
+    const shippingJson = shippingDetails ? JSON.stringify(shippingDetails) : null;
     await dbRun(
-        "UPDATE orders SET status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE stripe_session_id = ?",
-        [order.stripe_session_id]
+        "UPDATE orders SET status = 'paid', paid_at = CURRENT_TIMESTAMP, shipping_amount = ?, shipping_address = ? WHERE stripe_session_id = ?",
+        [shippingAmount, shippingJson, order.stripe_session_id]
     );
+    order.shipping_amount = shippingAmount;
+    order.shipping_address = shippingJson;
 
     try {
         await decrementOrderStock(order.items);
@@ -901,6 +998,8 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
             JWT_SECRET,
             { expiresIn: '7d' }
         );
+
+        sendWelcomeEmail(email, prenom || nom || 'cher client').catch(err => logger.error('Erreur welcome inscription:', err));
 
         res.json({
             success: true,
@@ -1394,15 +1493,56 @@ app.post('/api/payment/create-checkout-session', authenticateToken, async (req, 
             }
         }
 
+        // Plafonner la réduction pour éviter un total à 0€ (Stripe minimum 0,50€)
+        if (discountAmount >= subtotal) discountAmount = subtotal * 0.99;
+
         const finalTotal = subtotal - discountAmount;
 
+        // Calculer les options de livraison
+        const frShippingAmount = finalTotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FR;
+        // Les montants Stripe sont TTC (HT × (1 + TVA_RATE))
+        const shippingOptions = [
+            {
+                shipping_rate_data: {
+                    type: 'fixed_amount',
+                    fixed_amount: { amount: Math.round(frShippingAmount * (1 + TVA_RATE) * 100), currency: 'eur' },
+                    display_name: frShippingAmount === 0
+                        ? 'France — Livraison offerte'
+                        : 'France métropolitaine',
+                    delivery_estimate: {
+                        minimum: { unit: 'business_day', value: 3 },
+                        maximum: { unit: 'business_day', value: 7 },
+                    },
+                },
+            },
+            {
+                shipping_rate_data: {
+                    type: 'fixed_amount',
+                    fixed_amount: { amount: Math.round(SHIPPING_EU * (1 + TVA_RATE) * 100), currency: 'eur' },
+                    display_name: 'Europe (Belgique, Suisse, Luxembourg, Monaco)',
+                    delivery_estimate: {
+                        minimum: { unit: 'business_day', value: 5 },
+                        maximum: { unit: 'business_day', value: 10 },
+                    },
+                },
+            },
+        ];
+
         // Construire les line items pour Stripe
+        // Si code promo, on applique la réduction proportionnellement sur chaque article
+        // (Stripe n'autorise pas discounts + shipping_options dans la même session)
+        // discountFactor applique la réduction proportionnellement sur chaque article (HT)
+        // On multiplie ensuite par (1 + TVA_RATE) pour obtenir le prix TTC débité par Stripe
+        const discountFactor = discountAmount > 0 ? (finalTotal / subtotal) : 1;
+
         const lineItems = items.map(item => {
-            // Stripe exige des URLs HTTPS completes pour les images
             let images = undefined;
             if (item.image && item.image.startsWith('https://')) {
                 images = [item.image];
             }
+
+            // Prix TTC après réduction = HT × facteur_réduction × (1 + TVA)
+            const unitAmountTTC = Math.round(item.price * discountFactor * (1 + TVA_RATE) * 100);
 
             return {
                 price_data: {
@@ -1412,29 +1552,16 @@ app.post('/api/payment/create-checkout-session', authenticateToken, async (req, 
                         ...(item.description && { description: item.description }),
                         ...(images && { images: images }),
                     },
-                    unit_amount: Math.round(item.price * 100), // Stripe utilise les centimes
+                    unit_amount: unitAmountTTC,
                 },
                 quantity: item.quantity || 1,
             };
         });
 
-        // Creer un coupon Stripe si code promo applique
-        let discounts = [];
-        if (discountAmount > 0) {
-            const coupon = await stripe.coupons.create({
-                amount_off: Math.round(discountAmount * 100),
-                currency: 'eur',
-                name: `Réduction ${promoCodeUsed}`,
-                duration: 'once',
-            });
-            discounts = [{ coupon: coupon.id }];
-        }
-
         // Creer la session Stripe Checkout
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items: lineItems,
-            ...(discounts.length > 0 && { discounts }),
             mode: 'payment',
             success_url: successUrl || `${req.headers.origin}/boutique.html?payment=success`,
             cancel_url: cancelUrl || `${req.headers.origin}/boutique.html?payment=cancel`,
@@ -1446,6 +1573,7 @@ app.post('/api/payment/create-checkout-session', authenticateToken, async (req, 
             shipping_address_collection: {
                 allowed_countries: ['FR', 'BE', 'CH', 'LU', 'MC'],
             },
+            shipping_options: shippingOptions,
             billing_address_collection: 'required',
         });
 
@@ -1491,7 +1619,13 @@ app.get('/api/payment/status/:sessionId', authenticateToken, async (req, res) =>
                 [session.id]
             );
             if (order && order.status !== 'paid') {
-                await processCompletedPayment(order);
+                // Stripe renvoie le montant TTC — on stocke en HT pour la facture
+                const shippingTTC = session.shipping_cost?.amount_total
+                    ? session.shipping_cost.amount_total / 100
+                    : 0;
+                const shippingHT = shippingTTC / (1 + TVA_RATE);
+                const shippingDetails = session.shipping_details || null;
+                await processCompletedPayment(order, shippingHT, shippingDetails);
             }
         }
 

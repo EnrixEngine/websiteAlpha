@@ -10497,14 +10497,34 @@
         // Les cartes de galerie sont maintenant toujours visibles sans animation de slide
 
         // Gestion du formulaire newsletter
-        function handleNewsletter(event) {
+        async function handleNewsletter(event) {
             event.preventDefault();
-            const email = event.target.querySelector('input[type="email"]').value;
-
-            // Ici, vous pourrez ajouter l'intégration avec un service d'emailing
-            // Pour l'instant, on affiche juste un message
-            alert('Merci pour votre inscription ! 🎉\n\nVous recevrez bientôt des nouvelles de mes créations à : ' + email);
-            event.target.reset();
+            const form = event.target;
+            const email = form.querySelector('input[type="email"]').value;
+            const btn = form.querySelector('button');
+            btn.disabled = true;
+            btn.textContent = 'Inscription...';
+            try {
+                const res = await fetch('/api/newsletter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    btn.textContent = 'Inscrit !';
+                    btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+                    form.querySelector('input[type="email"]').value = '';
+                } else {
+                    btn.textContent = data.error || 'Erreur';
+                    btn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                    setTimeout(() => { btn.textContent = "S'inscrire"; btn.style.background = ''; btn.disabled = false; }, 3000);
+                }
+            } catch (err) {
+                btn.textContent = 'Erreur réseau';
+                btn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                setTimeout(() => { btn.textContent = "S'inscrire"; btn.style.background = ''; btn.disabled = false; }, 3000);
+            }
         }
 
         // ============ CARROUSEL HORIZONTAL MODERNE ============
